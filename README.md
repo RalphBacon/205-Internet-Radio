@@ -5,7 +5,7 @@
 An Internet Radio Player for around $20 (without a case) can't be all bad and you get to build it too!  
 
 ### https://www.pcbway.com First order free! 2-sided PCB just $5 for 10 pieces. 
-Assembly for 10-pieces just $30. PCB Prototyping the easy way - see my video #129 for Hands-On details.  
+**Assembly for 10-pieces just $30. PCB Prototyping the easy way - see my video #129 for Hands-On details.**  
 
 This **Internet Radio** was written from the ground up so that I could learn how it all worked. As a beta version 0.1 I think it's OK to release onto my unsuspecting YouTube viewers!  
 
