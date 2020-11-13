@@ -4,8 +4,7 @@
 ### See my YouTube video here: https://youtu.be/xrR8EZh2bMI  
 An Internet Radio Player for around $20 (without a case) can't be all bad and you get to build it too!  
 
-#### First order free! 2-sided PCB just $5 for 10 pieces. https://www.pcbway.com  
-**Assembly for 10-pieces just $30. PCB Prototyping the easy way - see my video #129 for Hands-On details.**  
+#### First order free! 2-sided PCB just $5 for 10 pieces. https://www.pcbway.com    
 
 <p align="center">
 <img src="/images/Internet_Radio.jpg" width="50%">
@@ -40,6 +39,9 @@ https://www.colincrawley.com/audio-file-size-calculator/
 
 Bodmer's **TFT_eSPI library** for 32-bit processors (eg ESP32 ESP8266)  
 https://github.com/Bodmer/TFT_eSPI  
+
+Baldram's (Marcin Szałomski) **library for the VS1053** that I used   
+https://github.com/baldram/ESP_VS1053_Library
 
 -----------------------
 INTERNET RADIO STATIONS
