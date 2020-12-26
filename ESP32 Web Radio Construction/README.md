@@ -4,7 +4,7 @@ December 2020
 
 #### STEP 1
 
-![Step 1.jpg](I:\Documents\GitHub\ESP32%20Web%20Radio%20Construction\images\Step%201.jpg)
+![Step 1.jpg](images/Step%201.jpg)
 
 Sort out the correct length pin header sockets and pins. They are always 2.5mm (0.1") spacing, same as a breadboard.
 
@@ -14,13 +14,13 @@ You need a 14-way socket for the screen PCB (plus a 4 pin socket that is not ele
 
 The ESP32 TTGO T8 V1.7.1 requires two 15-pin header sockets to plug into. Mount the sockets onto the PCB and the 15-pin headers (that are usually included with the module) to the ESP32 module.
 
-![Step 1A.jpg](I:\Documents\GitHub\ESP32%20Web%20Radio%20Construction\images\Step%201A.jpg)
+![Step 1A.jpg](images/Step%201A.jpg)
 
 You also need two strips of 10 header pins for the TFT PCB. Once again, **note that the pins are mounted from the rear**. Note sure? Look at some of the other photos before soldering anything!
 
 ### STEP 2
 
-<img title="" src="file:///I:/Documents/GitHub/ESP32%20Web%20Radio%20Construction/images/Step%202.jpg" alt="Step 2.jpg" data-align="center" width="469">
+<img title="" src="images/Step%202.jpg" alt="Step 2.jpg" data-align="center" width="469">
 
 Solder each of the header sockets / pin headers by **first tacking each end** to ensure they are totally vertical. When you are satisfied that they are good, continue soldering all the rest of the pins for that strip. 
 
@@ -32,7 +32,7 @@ Do this for both PCBs. This is the most time consuming aspect of the project but
 
 ### STEP 3
 
-![Step 3.jpg](I:\Documents\GitHub\ESP32%20Web%20Radio%20Construction\images\Step%203.jpg)
+![Step 3.jpg](images/Step%203.jpg)
 
 Your header sockets / pins are fitted and the flux removed. 
 
@@ -42,7 +42,7 @@ Fit the *optional *SMD 100nF capacitors by the 5v pin header before soldering th
 
 Don't fit the large, electrolytic capacitor by the 5v power pins yet.
 
-![IMG_20201226_133340.jpg](I:\Documents\GitHub\ESP32%20Web%20Radio%20Construction\images\IMG_20201226_133340.jpg)
+![IMG_20201226_133340.jpg](images/IMG_20201226_133340.jpg)
 
 Mount the VS1053 on standoffs, high enough so that the jack socket clears the pin headers when the IDC cables are fitted.
 
@@ -52,7 +52,7 @@ Now (optionally) fit the electrolytic capacitor, ensuring it fits snugly next to
 
 ### STEP 4
 
-![Step 4.jpg](I:\Documents\GitHub\ESP32%20Web%20Radio%20Construction\images\Step%204.jpg)
+![Step 4.jpg](images/Step%204.jpg)
 
 Nearly done. 
 
@@ -70,7 +70,7 @@ Power up.
 
 Assuming you have already uploaded the sketch and SPIFFS partition with all the relevant files (intro.mp3, WiFiSecrets.txt etc) with the partitions split into 2Mb/2Mb/No OTA you should be good to go.
 
-![IMG_20201226_133516.jpg](I:\Documents\GitHub\ESP32%20Web%20Radio%20Construction\images\IMG_20201226_133516.jpg)
+![IMG_20201226_133516.jpg](images/IMG_20201226_133516.jpg)
 
 The screen should burst into life and you should hear "ESP32 Web Radio". This start up message proves that the code is loaded and the VS1053 is connected correctly. It's pretty much the first thing that runs, intentionally so.
 
