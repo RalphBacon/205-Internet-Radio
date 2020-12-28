@@ -19,7 +19,7 @@ The shorter the better!
 
 3 x 100nF SMD capacitor (optional, a case of belt-and-braces)
 
-2.5mm (0.1”) pin headers just like on the Arduino, but for the IDC cables to plug into. Total pins approx. 80 pins, very cheap to buy!
+2.5mm (0.1”) pin headers (not sockets) just like on the Arduino, but for the IDC cables to plug into. Total pins approx. 80 pins, very cheap to buy!
 
 2 x 15-way female sockets (2.54mm , 0.1”) for the ESP32 to plug into: https://amzn.to/3axmvsf 
 
