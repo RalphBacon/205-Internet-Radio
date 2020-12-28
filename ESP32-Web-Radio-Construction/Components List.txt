@@ -1,0 +1,27 @@
+1 x TTGO T8 v1.7.1 ESP32 WROVER like this one:
+https://www.ebay.co.uk/itm/TTGO-T8-V1-1-ESP32-4MB-PSRAM-TF-CARD-3D-WiFi-bluetooth-ANTENNA-ESP32-WROVER/313296169908
+You can get them from Banggood, AliExpress even Amazon but they will take a while to ship.
+I'm assuming any TTGO T8 format (pinout) will work and fit the PCB but I haven't checked this.
+
+1 x 20-way (2 rows of 10 pins, 2.54mm , 0.1”) IDC female cable to connect the screen to the motherboard
+Like this one: https://www.ebay.co.uk/itm/220mm-IDC20-IDC-Female-Female-Flat-Ribbon-Cable-20-Pin-Gray/272723050970 
+Or this one: https://www.ebay.co.uk/itm/114032991586?ViewItem=&item=114032991586 
+
+1x 10-way (2 rows of 5 pins) IDC female cable (the same as used in programming the Arduino with an ISP)
+Like this one: https://www.hobbytronics.co.uk/idc-ribbon-cable-12-10?keyword=IDC
+The shorter the better!
+
+1 x 470μF capacitor (at least 10v but don’t go mad as they get bigger the higher the voltage) or similar (whatever fits nicely on the board)
+
+1 x 10kΩ resistor SMD or TH your choice
+
+1 x two-pin push button (optional just for “NEXT” testing but mandatory if you don’t have the screen working). If you want me to include this let me know.
+
+3 x 100nF SMD capacitor (optional, a case of belt-and-braces)
+
+2.5mm (0.1”) pin headers just like on the Arduino, but for the IDC cables to plug into. Total pins approx. 80 pins, very cheap to buy!
+
+2 x 15-way female sockets (2.54mm , 0.1”) for the ESP32 to plug into: https://amzn.to/3axmvsf 
+
+1 x 14-way female socket (2.54mm , 0.1”) for the screen to plug into (you can very carefully cut down a larger socket, as I did, now I have real ones!)
+
