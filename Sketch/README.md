@@ -2,6 +2,8 @@ The sketch was originally written using the **PlatformIO** IDE but will work jus
 
 ### For Arduino:
 
+### Do not do this any more, follow the instructions in the Arduino IDE folder here.
+
 Create (or copy) the folder with the sketch (src) and rename any .cpp files to .ino ones instead.
 
 Place each library file (in lib) into a folder of its own in the usual place (in Arduino-land, there's a **libraries** folder within the sketches folder). Then the compiler will find the libraries when you do the "#include" statement.
