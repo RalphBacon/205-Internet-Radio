@@ -158,7 +158,7 @@ void taskSetup();
 void checkBufferForPlaying();
 bool playMusicFromRingBuffer();
 
-// Which page are we on? Home page = normal use, stnslect is list of stations
+// Which page are we on? Home page = normal use, stnselect is list of stations
 enum screenPage
 {
 	HOME,
