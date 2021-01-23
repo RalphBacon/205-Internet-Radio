@@ -9,7 +9,7 @@
 #include "Free_Fonts.h"
 
 // Maximum stations per screen
-#define MAX_STATIONS_PER_SCREEN 3
+#define MAX_STATIONS_PER_SCREEN 5
 
 // Max stations and pages calculated in setup()
 uint8_t TOTAL_STATIONS;

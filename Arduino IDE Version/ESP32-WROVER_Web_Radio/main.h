@@ -12,7 +12,7 @@
 #include <WiFi.h>
 
 // MP3+ decoder
-#include "VS1053.h"
+#include <VS1053.h>
 
 // Standard input/output streams, required for <locale> but this might get removed
 #include <iostream>
@@ -93,7 +93,14 @@ char readBuffer[100] __attribute__((aligned(4)));
 #define VS1053_CS 32
 #define VS1053_DCS 33
 #define VS1053_DREQ 35
-#define MAX_VOLUME 95 // treble/bass works better if NOT 100 here
+
+// Volume settings user=as set by user, target=current program required volume (eg fading out)
+uint8_t targetVolume = 95; // treble/bass works better if NOT 100 here
+uint8_t userVolume = 0; // stored in EEPROM
+
+// Delay for music fade in after station change (glitchy sound)
+#define MIN_DELAY_AFTER_STATION_CHANGE 1200
+unsigned long timeAtStationChange; 
 
 // WiFi specific defines
 #define WIFITIMEOUTSECONDS 20
@@ -116,14 +123,18 @@ std::string toTitle(std::string s, const std::locale &loc = std::locale());
 void drawStnChangeButton();
 void drawStnChangeBitmap(bool pressed = false);
 void drawNextButton();
-void drawMuteButton(bool invert);
-void drawMuteBitmap(bool isMuted);
-void drawBrightButton(bool invert);
-void drawDimButton(bool invert);
+void drawSpkrButton(bool invert);
+void drawSpkrBitmap();
+void drawDummyPlusMinusButtons();
+void drawPlusButton(bool invert);
+void drawMinusButton(bool invert);
+void drawPercentageLine(int lineType);
+void drawBulbButton();
+void drawBulbBitmap(bool active=false);
 void drawBufferLevel(size_t bufferLevel, bool override = false);
 bool getStnChangeButtonPress(uint16_t x, uint16_t y);
-void getBrightButtonPress();
-void getDimButtonPress();
+void getPlusButtonPress();
+void getMinusButtonPress();
 void displayStationName(char *stationName);
 void displayTrackArtist(std::string);
 // End
@@ -138,14 +149,38 @@ bool _GLIBCXX_ALWAYS_INLINE readMetaData();
 void getRedirectedStationInfo(String header, int currStationNo);
 void checkForStationChange();
 void fadeOutMusic();
-void fadeInMusic();
+void fadeInMusic(int playerVol);
 void checkForNextButton();
+bool delaySinceStationChange();
 
 // Task Play Music Helper functions
 void taskSetup();
 void checkBufferForPlaying();
 bool playMusicFromRingBuffer();
 
+// Which page are we on? Home page = normal use, stnslect is list of stations
+enum screenPage
+{
+	HOME,
+	STNSELECT
+	// This will be expanded as I develop a menu structure
+};
+screenPage currDisplayScreen = HOME;
+
+// Button status to determine what has control over +/- buttons
+enum btnStatus {
+	BTN_INACTIVE,
+	BTN_ACTIVE
+};
+btnStatus bulbStatus = BTN_INACTIVE;
+btnStatus spkrStatus = BTN_INACTIVE;
+bool isMutedState = false;
+
+// The current Artist/Title (plus much more) info
+std::string currstreamArtistTitle = "";
+
+// global flag to indicate whether we successfully connected to a radio station
+bool connectedToStation = false;
 
 /*
 	Instantiate objects here so they can be referenced by all 'helper' code
