@@ -1,0 +1,2 @@
+#Ensure CRLF line endings are honoured on all text files
+*.txt text eol=crlf
