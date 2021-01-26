@@ -2,7 +2,11 @@
 
 <img src="images/v1.19_Arduino_IDE_Version.jpg" width="25%">  
 
-
+**v1.29 Various changes**
+  * Back/Cancel button in station list (simple button for now, bitmap later, maybe)
+  * Repeated metadata now trimmed (some stations repeat the Artist/Track twice!!!)
+  * Stalling at Starting MP3 Decoder fix (not necessarily the last time we do this)
+  * Various behind-the-scenes tidy ups (aka sweeping under the carpet)
  
 **v1.19 Stable version for Arduino IDE**
   * On screen volume & screen brightness indicator, stored in EEPROM

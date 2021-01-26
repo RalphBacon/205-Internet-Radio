@@ -22,6 +22,9 @@ TFT_eSPI_Button row[MAX_STATIONS_PER_SCREEN];
 TFT_eSPI_Button prevBtn;
 TFT_eSPI_Button nextBtn;
 
+// Cancel button (return to HOME screen w/o changing anything)
+TFT_eSPI_Button cancelBtn;
+
 // Which page (of stations) are we displaying?
 int currPage = 0;
 
@@ -68,6 +71,7 @@ int getStationListPress();
 void addStationToArray(radioStationLayout_t radioStationLayout);
 void populateStationList();
 void initStationSelect();
+void drawStationCancelButton();
 
 void stationSelectSetup()
 {
@@ -165,6 +169,9 @@ void listStationsOnScreen(int startPage)
 	{
 		drawNextStationBtn();
 	}
+
+	// Cancel btn
+	drawStationCancelButton();
 }
 
 // Next/previous buttons
@@ -197,6 +204,15 @@ void drawPrevStationBtn(bool disable)
 		prevBtn.initButtonUL(&tft, 10, 200, 30, 30, TFT_YELLOW, TFT_RED, TFT_WHITE, (char *)"<", 1);
 	}
 	prevBtn.drawButton(false);
+}
+
+// Cancel button
+void drawStationCancelButton()
+{
+	tft.setFreeFont(&FreeSansBold9pt7b);
+	cancelBtn.setLabelDatum(-5, 10, L_BASELINE);
+	cancelBtn.initButtonUL(&tft, 45, 203, 25, 25, TFT_YELLOW, TFT_BLUE, TFT_YELLOW, (char *)"X", 1);
+	cancelBtn.drawButton(false);
 }
 
 void stationNextPrevButtonPressed()
@@ -356,6 +372,11 @@ int getStationListPress()
 				buttonPressPending = false;
 			}
 		}
+
+		// Cancel button pressed? Same as pressing current station entry
+		if (cancelBtn.contains(x, y)){
+			pressedBtn = currStnNo;	
+		}
 	}
 
 	// Nothing pressed that was valid
@@ -371,7 +392,7 @@ void populateStationList()
 		if (f)
 		{
 			radioStationLayout_t radioStationLayout;
-			char buffer[100] = {'\0'};
+			char buffer[150] = {'\0'};
 			int bufCnt = 0;
 
 			// Create repository for all the parms for this station
@@ -387,7 +408,7 @@ void populateStationList()
 				// If the character is a quote (or 2nd char of CR/LF pair) ignore it
 				if (fByte != '"' && fByte != 10)
 				{
-					// If the character is a NOT comma add to buffer
+					// If the character is NOT a comma add to buffer
 					if (fByte != ',' && fByte != 13)
 					{
 						buffer[bufCnt] = fByte;
@@ -428,7 +449,7 @@ void populateStationList()
 						}
 
 						// Station processing complete: reset field count and init buffer
-						memset(buffer, '\0', 100);
+						memset(buffer, '\0', 150);
 						bufCnt = 0;
 					}
 				}
@@ -447,13 +468,14 @@ void populateStationList()
 
 			for (int cnt = 0; cnt < radioStation.size(); cnt++)
 			{
-				log_d("%d - %s %s %d (%s) %s",
-					  cnt,
-					  radioStation[cnt].host.c_str(),
-					  radioStation[cnt].path.c_str(),
-					  radioStation[cnt].port,
-					  radioStation[cnt].friendlyName.c_str(),
-					  radioStation[cnt].useMetaData == 1 ? "YES" : "NO");
+				log_d(
+					"%d - %s %s %d (%s) %s",
+					cnt,
+					radioStation[cnt].host.c_str(),
+					radioStation[cnt].path.c_str(),
+					radioStation[cnt].port,
+					radioStation[cnt].friendlyName.c_str(),
+					radioStation[cnt].useMetaData == 1 ? "YES" : "NO");
 			}
 		}
 	}

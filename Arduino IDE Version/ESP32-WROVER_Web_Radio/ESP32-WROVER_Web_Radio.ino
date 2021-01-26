@@ -25,7 +25,7 @@ void setup()
 
 	// Version number (long format, incl. date eg "v1.210123_5 - 2021-01-23 13:38:26.167703")
 	log_n("Version %s", VERSION);
-	
+
 	// Initialise EEPROM helper
 	preferences.begin("WebRadio", false);
 
@@ -66,30 +66,41 @@ void setup()
 	// From here we can use funtion displayTrackArtist(<message>)
 	initDisplay();
 
-	// VS1053 MP3 decoder
+	// VS1053 MP3 decoder. If we don't get a response continue anyway.
 	log_d("Starting player");
-	displayTrackArtist("Starting MP3 Decoder.");
-	while (!player.begin())
+	int mp3StartCount = 10;
+	do
 	{
-		delay(10);
-	};
+		char countDown[100];
+		sprintf(countDown, "Starting MP3 Decoder. (%d)", mp3StartCount);
+		displayTrackArtist(countDown);
+
+		delay(500);
+		mp3StartCount--;
+	} while (!player.begin() && mp3StartCount > 0);
 
 	player.setVolume(0);
 
 	// Wait for the player to be ready to accept data
+	// FIXME: I'm convinced that this is repeating player.begin() done above
 	log_d("Waiting for VS1053 initialisation to complete.");
-	while (!player.data_request())
+	mp3StartCount = 10;
+	do
 	{
-		delay(1);
-	}
+		char countDown[100];
+		sprintf(countDown, "Starting Warp Core Engine. (%d)", mp3StartCount);
+		displayTrackArtist(countDown);
+		delay(500);
+	} while (!player.data_request());
 
 	// You MIGHT have to set the VS1053 to MP3 mode. No harm done if not required!
 	log_d("Switch player to MP3 mode");
+	displayTrackArtist("Aligning Antimatter flow.");
 	player.switchToMp3Mode();
+	delay(250);
 
 	// Set the equivalent of "Loudness" (increased bass & treble)
 	// This works best if the volume is NOT set to 100%.
-	// TODO: set volume to 90% of max
 	// Bits 15:12	treble control in 1.5dB steps (-8 to +7, 0 = off)
 	// Bits 11:8	lower limit frequency in 1kHz steps (1kHz to 15kHz)
 	// Bits 7:4		Bass Enhancement in 1dB steps (0 - 15, 0 = off)
@@ -163,6 +174,7 @@ void setup()
 	}
 	prevStnNo = currStnNo;
 
+	// FIXME: Is this required here (in setup)? Done in loop()
 	// Set the station listing page number so when we open that it is on
 	// the correct page for the current station (used in stationSelectHelper.h, listStationsOnScreen)
 	currPage = currStnNo / MAX_STATIONS_PER_SCREEN;
@@ -315,6 +327,9 @@ void populateRingBuffer()
 	// Signed because we might get -1 returned
 	signed int bytesReadFromStream = 0;
 
+	// If we can't read bytes from the stream, keep track so we can reconnect
+	static int noBytesReadCount = 0;
+
 	// Room in the ring buffer for (up to) X bytes?
 	if (circBuffer.room() >= streamingCharsMax)
 	{
@@ -338,6 +353,31 @@ void populateRingBuffer()
 
 			// Subtract bytes actually read from incoming http data stream from the bytesUntilmetaData
 			bytesUntilmetaData -= bytesReadFromStream;
+		}
+		else
+		{
+			// Increment the problem counter
+			noBytesReadCount++;
+			log_w("Unable to read data from the stream, attempt:%d", noBytesReadCount);
+
+			// If the threshold is exceeded (when no bytes were read) reconnect to the current station
+			if (noBytesReadCount > 10)
+			{
+				log_d("Reconnecting to current station as unable to read bytes from stream");
+
+				// FIXME: Not the place to do this but for quick fix might be OK
+				// Do not clear the buffer - if there is data there it is still good
+				if (stationConnect(currStnNo, false))
+				{
+					// We reconnected so reset the problem counter
+					log_d("Reconnection SUCCESSFUL, resetting error flag");
+					noBytesReadCount = 0;
+				}
+				else
+				{
+					log_d("Reconnection UNSUCCESSFUL, will retry");
+				};
+			}
 		}
 	}
 }
@@ -423,15 +463,20 @@ bool stationConnect(int stationNo, bool clearBuffer)
 		return false;
 	}
 
-	log_d("Connected to %s (%s%s)",
-		  radioStation[stationNo].host.c_str(), radioStation[stationNo].friendlyName.c_str(),
-		  redirected ? " - redirected" : "");
+	log_d(
+		"Connected to %s (%s%s)",
+		radioStation[stationNo].host.c_str(), radioStation[stationNo].friendlyName.c_str(),
+		redirected ? " - redirected" : "");
 	displayTrackArtist("Connected. Reading stream...");
 
 	// Get the data stream plus any metadata (eg station name, track info between songs / ads)
 	// TODO: Allow retries here (BBC Radio 4 very finicky before streaming).
 	// We might also get a redirection URL given back.
-	log_i("Getting data from %s (%s Metadata)", radioStation[stationNo].path.c_str(), (METADATA ? "WITH" : "WITHOUT"));
+	log_i(
+		"Getting data from %s (%s Metadata)",
+		radioStation[stationNo].path.c_str(),
+		(METADATA ? "WITH" : "WITHOUT"));
+
 	client.print(
 		String("GET ") + radioStation[stationNo].path.c_str() + " HTTP/1.1\r\n" +
 		"Host: " + radioStation[stationNo].host.c_str() + "\r\n" +
@@ -866,6 +911,11 @@ void checkForStationChange()
 				// Set the current screen with the current station on it
 				currDisplayScreen = STNSELECT;
 
+				// Set the station listing page number so when we open that it is on
+				// the correct page for the current station (used in stationSelectHelper.h, listStationsOnScreen)
+				currPage = currStnNo / MAX_STATIONS_PER_SCREEN;
+				log_d("Current station %d appears on page %d", currStnNo, currPage);
+
 				// Display the (current) page of stations plus Next/Prev buttons
 				initStationSelect();
 
@@ -974,8 +1024,10 @@ void fadeInMusic(int playerVolume)
 }
 
 // Prevents fade in of music until minium time since station change to avoid glitchy sound
-bool delaySinceStationChange() {
-	if (millis() - timeAtStationChange > MIN_DELAY_AFTER_STATION_CHANGE){
+bool delaySinceStationChange()
+{
+	if (millis() - timeAtStationChange > MIN_DELAY_AFTER_STATION_CHANGE)
+	{
 		return true;
 	}
 

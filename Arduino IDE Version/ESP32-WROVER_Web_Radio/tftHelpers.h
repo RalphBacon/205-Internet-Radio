@@ -78,7 +78,7 @@ void initDisplay()
 				tft.setTouch(calData);
 
 			log_v("TFT Calibration data:");
-			for (auto cnt = 0; cnt < totCalibrationBytes; cnt++)
+			for (auto cnt = 0; cnt < totCalibrationBytes / sizeof(int); cnt++)
 			{
 				log_v("%04X, ", calData[cnt]);
 			}
@@ -759,6 +759,7 @@ void displayStationName(std::string stationName)
 
 // Incoming string will normally be in the format Artist - Title
 // But some stations do it the other way around. No standards here.
+// Some do this: "Artist - Title - Artist - Title" What is this?
 void displayTrackArtist(std::string trackArtistIn)
 {
 	// Placeholder strings for final output
@@ -790,6 +791,14 @@ void displayTrackArtist(std::string trackArtistIn)
 		std::string justTitleTemp(&trackArtist[startCnt + 3], trackArtistIn.size());
 		justTitle = justTitleTemp;
 		log_d("Title: '%s'", justTitle.c_str());
+
+		// If the information is repeated just truncate that
+		pointerToDelimiter = strstr(justTitle.c_str(), " - ");
+		if (pointerToDelimiter != NULL) {
+			std::string justTitleTemp(&justTitle[0], pointerToDelimiter);
+			justTitle = justTitleTemp;
+			log_d("Truncated Title: '%s'", justTitle.c_str());
+		}
 
 		// Success
 		splitSuccessful = true;

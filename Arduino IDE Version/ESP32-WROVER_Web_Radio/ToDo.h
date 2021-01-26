@@ -66,7 +66,7 @@
 
 	21 - On changing station clear the ring buffer otherwise it continues to play that until new data is found DONE:
 
-	22 -  Add Brightess icon and use the existing +/- buttons to control Volume and Brightness depending on selection ENHANCEMENT:
+	22 -  Add Brightess icon and use the existing +/- buttons to control Volume and Brightness depending on selection ENHANCEMENT: DONE:
 
 	
 

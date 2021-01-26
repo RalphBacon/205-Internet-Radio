@@ -14,3 +14,4 @@ s1.slotex.pl,7274,"/",Radio Kehlkopf,0
 "live-bauer-mz.sharp-stream.com",80,"/net2lincoln.aac",Greatest Hits (Lincoln),1
 ais-edge09-live365-dal02.cdnstream.com,80,/a52107?listenerId=esAdblock0650048,Heckington Community Radio,1
 live-bauer-mz.sharp-stream.com,80,/net1lincoln.aac,Radio Lincs FM,1
+uk3.internet-radio.com,8405,/live,Majestic Jukebox,1

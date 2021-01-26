@@ -2,6 +2,18 @@
 #ifndef _ESP32RADIO_
 #define _ESP32RADIO_
 
+// Set the debugging level. Done automatically with PlatformIO but not for Arduino.
+#ifndef CORE_DEBUG_LEVEL
+// ; ARDUHAL_LOG_LEVEL +
+// ;	_NONE       (0) // Stumm. Nada. On your own.
+// ;	_ERROR      (1) // Usually fatal errors
+// ;	_WARN       (2) // Only when things go wrong
+// ;	_INFO       (3) // Useful just to see it working
+// ;	_DEBUG      (4) // Debugging programming
+// ;	_VERBOSE    (5) // Every message
+#define CORE_DEBUG_LEVEL ARDUHAL_LOG_LEVEL_DEBUG
+#endif
+
 /*
 	Includes go here
 */
@@ -96,11 +108,11 @@ char readBuffer[100] __attribute__((aligned(4)));
 
 // Volume settings user=as set by user, target=current program required volume (eg fading out)
 uint8_t targetVolume = 95; // treble/bass works better if NOT 100 here
-uint8_t userVolume = 0; // stored in EEPROM
+uint8_t userVolume = 0;	   // stored in EEPROM
 
 // Delay for music fade in after station change (glitchy sound)
 #define MIN_DELAY_AFTER_STATION_CHANGE 1200
-unsigned long timeAtStationChange; 
+unsigned long timeAtStationChange;
 
 // WiFi specific defines
 #define WIFITIMEOUTSECONDS 20
@@ -130,7 +142,7 @@ void drawPlusButton(bool invert);
 void drawMinusButton(bool invert);
 void drawPercentageLine(int lineType);
 void drawBulbButton();
-void drawBulbBitmap(bool active=false);
+void drawBulbBitmap(bool active = false);
 void drawBufferLevel(size_t bufferLevel, bool override = false);
 bool getStnChangeButtonPress(uint16_t x, uint16_t y);
 void getPlusButtonPress();
@@ -168,7 +180,8 @@ enum screenPage
 screenPage currDisplayScreen = HOME;
 
 // Button status to determine what has control over +/- buttons
-enum btnStatus {
+enum btnStatus
+{
 	BTN_INACTIVE,
 	BTN_ACTIVE
 };
