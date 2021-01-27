@@ -10,7 +10,7 @@ An Internet Radio Player for around $20 (without a case) can't be all bad and yo
 <img src="/images/Internet_Radio.jpg" width="50%">
 </p>  
 <p align="center"> 
-<em>Above picture shows an updated version with Prev/Next and buffer level.</em>
+<em>Above picture shows an old version with Prev/Next and buffer level.</em>
 </p>
 
 This **Internet Radio** was written from the ground up so that I could learn how it all worked. As a beta version 0.1 I think it's OK to release onto my unsuspecting YouTube viewers!  
