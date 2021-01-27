@@ -23,10 +23,6 @@ Your comments, requests and improvements gratefully received!
 
 #### To support my channel please do click on the affiliate links below before ordering ANYTHING from Banggood, AliExpress or Amazon. It expires 24 hours after clicking it so do come back and re-click!  
 
-**ATTENTION!       ATTENTION!       ATTENTION!       ATTENTION!**  
-All this information PLUS the sketches in my GitHub:  
-https://github.com/RalphBacon/205-Internet-Radio  
-
 -----------  
 INFORMATION  
 -----------  
