@@ -5,7 +5,7 @@ To prevent this, and avoid trying to use the PSRAM, change the **main.h** file i
 // Circular "Read Buffer" to stop stuttering on some stations  
 // Note: core found in "C:\Users\Ralph\AppData\Local\Arduino15\packages\esp32\hardware\esp32\1.0.6\cores\esp32"  
 #ifdef BOARD_HAS_PSRAM  
-#define CIRCULARBUFFERSIZE **150000**  
+#define CIRCULARBUFFERSIZE **150000**  <-- change this value to 10000  
 #else  
 #define CIRCULARBUFFERSIZE 10000  
 #endif  
