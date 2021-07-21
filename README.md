@@ -5,10 +5,11 @@
 An Internet Radio Player for around $20 (without a case) can't be all bad and you get to build it too!  
 
 <p align="center">
-<img src="/images/Internet_Radio.jpg" width="50%">
+<img src="/Arduino IDE Version/ESP32-WROVER_Web_Radio/images/v1.35_Arduino_IDE_version.jpg" width="25%">
+  
 </p>  
 <p align="center"> 
-<em>Above picture shows an old version with Prev/Next and buffer level.</em>
+<em>Current version (July 2021)</em>
 </p>
 
 **Release V1.35**  
