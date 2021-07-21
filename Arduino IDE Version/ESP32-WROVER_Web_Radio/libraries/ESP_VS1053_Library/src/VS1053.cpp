@@ -6,7 +6,7 @@
  * version 1.0.1
  *
  * Licensed under GNU GPLv3 <http://gplv3.fsf.org/>
- * Copyright © 2017
+ * Copyright © 2018
  *
  * @authors baldram, edzelf, MagicCube, maniacbug
  *
@@ -30,10 +30,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#include <ArduinoLog.h>
-#include <VS1053.h>
-#include <string>
+#include "VS1053.h"
 
 VS1053::VS1053(uint8_t _cs_pin, uint8_t _dcs_pin, uint8_t _dreq_pin)
         : cs_pin(_cs_pin), dcs_pin(_dcs_pin), dreq_pin(_dreq_pin) {
@@ -119,7 +116,7 @@ bool VS1053::testComm(const char *header) {
     uint16_t delta = 300; // 3 for fast SPI
 
     if (!digitalRead(dreq_pin)) {
-        Log.error("VS1053 not properly installed!" CR);
+        LOG("VS1053 not properly installed!\n");
         // Allow testing without the VS1053 module
         pinMode(dreq_pin, INPUT_PULLUP); // DREQ is now input with pull-up
         return false;                    // Return bad result
@@ -132,8 +129,7 @@ bool VS1053::testComm(const char *header) {
         delta = 3; // Fast SPI, more loops
     }
 
-    std::string headerCr = std::string(header) + CR;
-    Log.notice(headerCr.c_str());  // Show a header
+    LOG("%s", header);  // Show a header
 
     for (i = 0; (i < 0xFFFF) && (cnt < 20); i += delta) {
         write_register(SCI_VOL, i);         // Write data to SCI_VOL
@@ -141,7 +137,7 @@ bool VS1053::testComm(const char *header) {
         r2 = read_register(SCI_VOL);        // Read back a second time
         if (r1 != r2 || i != r1 || i != r2) // Check for 2 equal reads
         {
-            Log.error("VS1053 error retry SB:%04X R1:%04X R2:%04X" CR, i, r1, r2);
+            LOG("VS1053 error retry SB:%04X R1:%04X R2:%04X\n", i, r1, r2);
             cnt++;
             delay(10);
         }
@@ -150,77 +146,99 @@ bool VS1053::testComm(const char *header) {
     return (cnt == 0); // Return the result
 }
 
-bool VS1053::begin() {
-    bool result = false;
+void VS1053::begin() {
     pinMode(dreq_pin, INPUT); // DREQ is an input
     pinMode(cs_pin, OUTPUT);  // The SCI and SDI signals
     pinMode(dcs_pin, OUTPUT);
     digitalWrite(dcs_pin, HIGH); // Start HIGH for SCI en SDI
     digitalWrite(cs_pin, HIGH);
     delay(100);
-    Log.notice("Reset VS1053..." CR);
+    LOG("\n");
+    LOG("Reset VS1053...\n");
     digitalWrite(dcs_pin, LOW); // Low & Low will bring reset pin low
     digitalWrite(cs_pin, LOW);
     delay(500);
-    Log.notice("End reset VS1053..." CR);
+    LOG("End reset VS1053...\n");
     digitalWrite(dcs_pin, HIGH); // Back to normal again
     digitalWrite(cs_pin, HIGH);
     delay(500);
     // Init SPI in slow mode ( 0.2 MHz )
     VS1053_SPI = SPISettings(200000, MSBFIRST, SPI_MODE0);
-    // printDetails ( "Right after reset/startup" ) ;
+    // printDetails("Right after reset/startup");
     delay(20);
-    // printDetails ( "20 msec after reset" ) ;
-    result = testComm("Slow SPI,Testing VS1053 read/write registers...");
-
-    //softReset();
-
-    // Switch on the analog parts
-    write_register(SCI_AUDATA, 44101); // 44.1kHz stereo
-    // The next clocksetting allows SPI clocking at 5 MHz, 4 MHz is safe then.
-    write_register(SCI_CLOCKF, 6 << 12); // Normal clock settings multiplyer 3.0 = 12.2 MHz
-    // SPI Clock to 4 MHz. Now you can set high speed SPI clock.
-    VS1053_SPI = SPISettings(4000000, MSBFIRST, SPI_MODE0);
-    write_register(SCI_MODE, _BV(SM_SDINEW) | _BV(SM_LINE1));
-    result = testComm("Fast SPI, Testing VS1053 read/write registers again...");
-    delay(10);
-    await_data_request();
-    endFillByte = wram_read(0x1E06) & 0xFF;
-    Log.notice("endFillByte is %X" CR, endFillByte);
-    // printDetails ( "After last clocksetting" ) ;
-    delay(100);
-    return result;
+    // printDetails("20 msec after reset");
+    if (testComm("Slow SPI,Testing VS1053 read/write registers...\n")) {
+        //softReset();
+        // Switch on the analog parts
+        write_register(SCI_AUDATA, 44101); // 44.1kHz stereo
+        // The next clocksetting allows SPI clocking at 5 MHz, 4 MHz is safe then.
+        write_register(SCI_CLOCKF, 6 << 12); // Normal clock settings multiplyer 3.0 = 12.2 MHz
+        // SPI Clock to 4 MHz. Now you can set high speed SPI clock.
+        VS1053_SPI = SPISettings(4000000, MSBFIRST, SPI_MODE0);
+        write_register(SCI_MODE, _BV(SM_SDINEW) | _BV(SM_LINE1));
+        testComm("Fast SPI, Testing VS1053 read/write registers again...\n");
+        delay(10);
+        await_data_request();
+        endFillByte = wram_read(0x1E06) & 0xFF;
+        LOG("endFillByte is %X\n", endFillByte);
+        //printDetails("After last clocksetting") ;
+        delay(100);
+    }
 }
 
 void VS1053::setVolume(uint8_t vol) {
     // Set volume.  Both left and right.
     // Input value is 0..100.  100 is the loudest.
-    uint16_t value; // Value to send to SCI_VOL
+    uint8_t valueL, valueR; // Values to send to SCI_VOL
 
-    if (vol != curvol) {
-        curvol = vol;                         // Save for later use
-        value = map(vol, 0, 100, 0xFF, 0x00); // 0..100% to one channel
-        value = (value << 8) | value;
-        write_register(SCI_VOL, value); // Volume left and right
+    curvol = vol;                         // Save for later use
+    valueL = vol;
+    valueR = vol;
+
+    if (curbalance < 0) {
+        valueR = max(0, vol + curbalance);
+    } else if (curbalance > 0) {
+        valueL = max(0, vol - curbalance);
+    }
+
+    valueL = map(valueL, 0, 100, 0xFE, 0x00); // 0..100% to left channel
+    valueR = map(valueR, 0, 100, 0xFE, 0x00); // 0..100% to right channel
+
+    write_register(SCI_VOL, (valueL << 8) | valueR); // Volume left and right
+}
+
+void VS1053::setBalance(int8_t balance) {
+    if (balance > 100) {
+        curbalance = 100;
+    } else if (balance < -100) {
+        curbalance = -100;
+    } else {
+        curbalance = balance;
     }
 }
 
-void VS1053::setTone(uint16_t rtone) // Set bass/treble (4 nibbles)
-{
-	// RSB Could not get this to work, override
+void VS1053::setTone(uint8_t *rtone) { // Set bass/treble (4 nibbles)
     // Set tone characteristics.  See documentation for the 4 nibbles.
-    // uint16_t value = 0; // Value to send to SCI_BASS
-    // int i;              // Loop control
+    uint16_t value = 0; // Value to send to SCI_BASS
+    int i;              // Loop control
 
-    // for (i = 0; i < 8; i++) {
-    //     value = (value << 4) | rtone[i]; // Shift next nibble in
-    // }
-    write_register(SCI_BASS, rtone);
+    for (i = 0; i < 4; i++) {
+        value = (value << 4) | rtone[i]; // Shift next nibble in
+    }
+    write_register(SCI_BASS, value); // Volume left and right
 }
 
-uint8_t VS1053::getVolume() // Get the currenet volume setting.
-{
+// RSB Alternative method
+void VS1053::setAudio(uint16_t audio){
+	write_register(SCI_BASS, audio);
+}
+
+uint8_t VS1053::getVolume() { // Get the currenet volume setting.
     return curvol;
+}
+
+int8_t VS1053::getBalance() { // Get the currenet balance setting.
+    return curbalance;
 }
 
 void VS1053::startSong() {
@@ -243,7 +261,7 @@ void VS1053::stopSong() {
         modereg = read_register(SCI_MODE); // Read status
         if ((modereg & _BV(SM_CANCEL)) == 0) {
             sdi_send_fillers(2052);
-            Log.notice("Song stopped correctly after %d msec" CR, i * 10);
+            LOG("Song stopped correctly after %d msec\n", i * 10);
             return;
         }
         delay(10);
@@ -252,6 +270,7 @@ void VS1053::stopSong() {
 }
 
 void VS1053::softReset() {
+    LOG("Performing soft-reset\n");
     write_register(SCI_MODE, _BV(SM_SDINEW) | _BV(SM_RESET));
     delay(10);
     await_data_request();
@@ -261,17 +280,15 @@ void VS1053::printDetails(const char *header) {
     uint16_t regbuf[16];
     uint8_t i;
 
-    std::string headerCr = std::string(header) + CR;
-    Log.notice(headerCr.c_str());
-
-    Log.notice("REG   Contents" CR);
-    Log.notice("---   -----" CR);
+    LOG("%s", header);
+    LOG("REG   Contents\n");
+    LOG("---   -----\n");
     for (i = 0; i <= SCI_num_registers; i++) {
         regbuf[i] = read_register(i);
     }
     for (i = 0; i <= SCI_num_registers; i++) {
         delay(5);
-        Log.notice("%3X - %5X" CR, i, regbuf[i]);
+        LOG("%3X - %5X\n", i, regbuf[i]);
     }
 }
 
@@ -283,10 +300,58 @@ void VS1053::printDetails(const char *header) {
  *
  * Read more here: http://www.bajdi.com/lcsoft-vs1053-mp3-module/#comment-33773
  */
-void VS1053::switchToMp3Mode(void)
-{
+void VS1053::switchToMp3Mode() {
     wram_write(0xC017, 3); // GPIO DDR = 3
     wram_write(0xC019, 0); // GPIO ODATA = 0
     delay(100);
+    LOG("Switched to mp3 mode\n");
     softReset();
+}
+
+/**
+ * A lightweight method to check if VS1053 is correctly wired up (power supply and connection to SPI interface).
+ *
+ * @return true if the chip is wired up correctly
+ */
+bool VS1053::isChipConnected() {
+    uint16_t status = read_register(SCI_STATUS);
+
+    return !(status == 0 || status == 0xFFFF);
+}
+
+/**
+ * Provides current decoded time in full seconds (from SCI_DECODE_TIME register value)
+ *
+ * When decoding correct data, current decoded time is shown in SCI_DECODE_TIME
+ * register in full seconds. The user may change the value of this register.
+ * In that case the new value should be written twice to make absolutely certain
+ * that the change is not overwritten by the firmware. A write to SCI_DECODE_TIME
+ * also resets the byteRate calculation.
+ *
+ * SCI_DECODE_TIME is reset at every hardware and software reset. It is no longer
+ * cleared when decoding of a file ends to allow the decode time to proceed
+ * automatically with looped files and with seamless playback of multiple files.
+ * With fast playback (see the playSpeed extra parameter) the decode time also
+ * counts faster. Some codecs (WMA and Ogg Vorbis) can also indicate the absolute
+ * play position, see the positionMsec extra parameter in section 10.11.
+ *
+ * @see VS1053b Datasheet (1.31) / 9.6.5 SCI_DECODE_TIME (RW)
+ *
+ * @return current decoded time in full seconds
+ */
+uint16_t VS1053::getDecodedTime() {
+    return read_register(SCI_DECODE_TIME);
+}
+
+/**
+ * Clears decoded time (sets SCI_DECODE_TIME register to 0x00)
+ *
+ * The user may change the value of this register. In that case the new value
+ * should be written twice to make absolutely certain that the change is not
+ * overwritten by the firmware. A write to SCI_DECODE_TIME also resets the
+ * byteRate calculation.
+ */
+void VS1053::clearDecodedTime() {
+    write_register(SCI_DECODE_TIME, 0x00);
+    write_register(SCI_DECODE_TIME, 0x00);
 }

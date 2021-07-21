@@ -86,10 +86,17 @@ int bitRate = 0;
 bool redirected = false;
 bool volumeMax = false;
 
+// Bytes between chunked data (http/1.1 BBC only) and the buffer to hold the chunk size (in ASCII hex)
+uint16_t bytesUntilNextChunk = 0;
+char chunkSizeByte[1];
+char chunkSizeBuffer[20];
+bool isChunked = false;
+
 // Dedicated 32-byte buffer for VS1053 aligned on 4-byte boundary for efficiency
 uint8_t mp3buff[32] __attribute__((aligned(4)));
 
 // Circular "Read Buffer" to stop stuttering on some stations
+// Note: core found in "C:\Users\Ralph\.platformio\packages\framework-arduinoespressif32\cores\esp32"
 #ifdef BOARD_HAS_PSRAM
 #define CIRCULARBUFFERSIZE 150000 // Divide by 32 to see how many 2mS samples this can store
 #else
@@ -97,6 +104,13 @@ uint8_t mp3buff[32] __attribute__((aligned(4)));
 #endif
 cbuf circBuffer(10);
 #define streamingCharsMax 32
+int bufferPerCent; // global value to detect stalled station
+
+// Low buffer count milliseconds
+#define LOWBUFFER_SECONDS 1000
+
+// Low buffer count retries before retuning (might be a redirect)
+#define LOWBUFFER_RECOVERYCOUNT_MAX 10
 
 // Internet stream buffer that we copy in chunks to the ring buffer
 char readBuffer[100] __attribute__((aligned(4)));
@@ -149,6 +163,16 @@ void getPlusButtonPress();
 void getMinusButtonPress();
 void displayStationName(char *stationName);
 void displayTrackArtist(std::string);
+void drawFailureStreamingCount(int failCount);
+void drawSettingsBtn();
+void getSettingsBtn();
+bool getBtnPressAndRelease(TFT_eSPI_Button btn);
+// End
+
+// Settings Helper routines
+void displaySettingsScreen();
+void drawSettingsCancelButton();
+bool getSettingsCancelPress();
 // End
 
 // Loop functions
@@ -164,6 +188,7 @@ void fadeOutMusic();
 void fadeInMusic(int playerVol);
 void checkForNextButton();
 bool delaySinceStationChange();
+void doCriticalTasks();
 
 // Task Play Music Helper functions
 void taskSetup();
@@ -174,7 +199,8 @@ bool playMusicFromRingBuffer();
 enum screenPage
 {
 	HOME,
-	STNSELECT
+	STNSELECT,
+	SETTINGS
 	// This will be expanded as I develop a menu structure
 };
 screenPage currDisplayScreen = HOME;

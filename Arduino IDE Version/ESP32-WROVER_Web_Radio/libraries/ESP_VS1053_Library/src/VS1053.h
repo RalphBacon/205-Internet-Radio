@@ -36,6 +36,7 @@
 
 #include <Arduino.h>
 #include <SPI.h>
+#include "ConsoleLogger.h"
 
 class VS1053 {
 private:
@@ -43,11 +44,15 @@ private:
     uint8_t dcs_pin;                        // Pin where DCS line is connected
     uint8_t dreq_pin;                       // Pin where DREQ line is connected
     uint8_t curvol;                         // Current volume setting 0..100%
+    int8_t  curbalance = 0;                 // Current balance setting -100..100
+                                            // (-100 = right channel silent, 100 = left channel silent)
     const uint8_t vs1053_chunk_size = 32;
     // SCI Register
     const uint8_t SCI_MODE = 0x0;
+    const uint8_t SCI_STATUS = 0x1;
     const uint8_t SCI_BASS = 0x2;
     const uint8_t SCI_CLOCKF = 0x3;
+    const uint8_t SCI_DECODE_TIME = 0x4;        // current decoded time in full seconds
     const uint8_t SCI_AUDATA = 0x5;
     const uint8_t SCI_WRAM = 0x6;
     const uint8_t SCI_WRAMADDR = 0x7;
@@ -109,28 +114,60 @@ public:
     // Constructor.  Only sets pin values.  Doesn't touch the chip.  Be sure to call begin()!
     VS1053(uint8_t _cs_pin, uint8_t _dcs_pin, uint8_t _dreq_pin);
 
-    bool begin();                               // Begin operation.  Sets pins correctly,
-                                                // and prepares SPI bus.
-    void startSong();                           // Prepare to start playing. Call this each
-                                                // time a new song starts.
-    void playChunk(uint8_t *data, size_t len);  // Play a chunk of data.  Copies the data to
-                                                // the chip.  Blocks until complete.
-    void stopSong();                            // Finish playing a song. Call this after
-                                                // the last playChunk call.
-    void setVolume(uint8_t vol);                // Set the player volume.Level from 0-100,
-    // RSB changed to two-byte int              // higher is louder.
-    void setTone(uint16_t rtone);               // Set the player baas/treble, 4 nibbles for
-                                                // treble gain/freq and bass gain/freq
-    uint8_t getVolume();                        // Get the currenet volume setting.
-                                                // higher is louder.
-    void printDetails(const char *header);      // Print configuration details to serial output.
-    void softReset();                           // Do a soft reset
-    bool testComm(const char *header);          // Test communication with module
+    // Begin operation.  Sets pins correctly, and prepares SPI bus.
+    void begin();
+
+    // Prepare to start playing. Call this each time a new song starts
+    void startSong();
+
+    // Play a chunk of data.  Copies the data to the chip.  Blocks until complete
+    void playChunk(uint8_t *data, size_t len);
+
+    // Finish playing a song. Call this after the last playChunk call
+    void stopSong();
+
+    // Set the player volume.Level from 0-100, higher is louder
+    void setVolume(uint8_t vol);
+
+    // Adjusting the left and right volume balance, higher to enhance the right side, lower to enhance the left side.
+    void setBalance(int8_t balance);
+
+    // Set the player baas/treble, 4 nibbles for treble gain/freq and bass gain/freq
+    void setTone(uint8_t *rtone);
+
+	// RSB alternative method
+	void setAudio(uint16_t rtone);
+
+    // Get the currenet volume setting, higher is louder
+    uint8_t getVolume();
+
+    // Get the currenet balance setting (-100..100)
+    int8_t getBalance();
+
+    // Print configuration details to serial output.
+    void printDetails(const char *header);
+
+    // Do a soft reset
+    void softReset();
+
+    // Test communication with module
+    bool testComm(const char *header);
+
     inline bool data_request() const {
         return (digitalRead(dreq_pin) == HIGH);
     }
 
-    void switchToMp3Mode(void);
+    // An optional switch preventing the module starting up in MIDI mode
+    void switchToMp3Mode();
+
+    // Checks whether the VS1053 chip is connected and is able to exchange data to the ESP
+    bool isChipConnected();
+
+    // Provides SCI_DECODE_TIME register value
+    uint16_t getDecodedTime();
+
+    // Clears SCI_DECODE_TIME register (sets 0x00)
+    void clearDecodedTime();
 };
 
 #endif

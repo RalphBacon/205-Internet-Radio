@@ -4,6 +4,10 @@
 #include "wifiHelpers.h"
 #include "taskPlayMusicHelper.h"
 #include "stationSelectHelper.h"
+#include "settingsHelper.h"
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
+#include "urlHelper.h"
 
 // Level is set (see platformio.ini to set this)
 /*
@@ -15,11 +19,26 @@
 	LEVEL_VERBOSE    (5) // Every message
 */
 
+#define ONESECOND 1000
+#define FIVESECONDS 5000
+#define TENSECONDS 10000
+#define THIRTYSECONDS 30000
+
 // ==================================================================================
 // setup	setup	setup	setup	setup	setup	setup	setup	setup
 // ==================================================================================
 void setup()
 {
+	// disable brownout detector
+	// WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
+
+	/*
+		To re-enable the brown out detector, do this:
+
+		// enable brownout detector
+		WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 1); 
+	*/
+
 	// Debug monitor
 	Serial.begin(115200);
 
@@ -29,7 +48,13 @@ void setup()
 	// Initialise EEPROM helper
 	preferences.begin("WebRadio", false);
 
-	// Are we using PSRAM?
+// Are we using PSRAM?
+#ifdef BOARD_HAS_PSRAM
+	log_d("This board has PSRAM installed.");
+#else
+	log_d("This board has no PSRAM installed.");
+#endif
+
 	tft.println("Setup creating ring buffer.");
 	circBuffer.resize(CIRCULARBUFFERSIZE);
 	log_d("Total heap: %d", ESP.getHeapSize());
@@ -46,9 +71,6 @@ void setup()
 	// initialize SPI bus;
 	log_d("Starting SPI");
 	SPI.begin();
-
-	//How much SRAM free (heap memory)
-	log_d("Free memory: %d bytes", ESP.getFreeHeap());
 
 	// Initialise LITTLEFS system
 	if (!LITTLEFS.begin(false))
@@ -67,52 +89,41 @@ void setup()
 	initDisplay();
 
 	// VS1053 MP3 decoder. If we don't get a response continue anyway.
-	log_d("Starting player");
-	int mp3StartCount = 10;
-	do
-	{
-		char countDown[100];
-		sprintf(countDown, "Starting MP3 Decoder. (%d)", mp3StartCount);
-		displayTrackArtist(countDown);
+	log_d("Starting Audio Player.");
+	displayTrackArtist("Starting Audio Player.");
+	player.begin();
+	// Note: player.begin can sometimes hang.
+	// FIXME:Needs to be looked at (perhaps a later version of the library fixes this)
+	// IN PROGRESS: New library used but still hangs occasionally
 
-		delay(500);
-		mp3StartCount--;
-	} while (!player.begin() && mp3StartCount > 0);
-
+	// Mute the sound temporarily
 	player.setVolume(0);
-
-	// Wait for the player to be ready to accept data
-	// FIXME: I'm convinced that this is repeating player.begin() done above
-	log_d("Waiting for VS1053 initialisation to complete.");
-	mp3StartCount = 10;
-	do
-	{
-		char countDown[100];
-		sprintf(countDown, "Starting Warp Core Engine. (%d)", mp3StartCount);
-		displayTrackArtist(countDown);
-		delay(500);
-	} while (!player.data_request());
 
 	// You MIGHT have to set the VS1053 to MP3 mode. No harm done if not required!
 	log_d("Switch player to MP3 mode");
-	displayTrackArtist("Aligning Antimatter flow.");
+	displayTrackArtist("Switching to MP3 mode.");
 	player.switchToMp3Mode();
 	delay(250);
 
 	// Set the equivalent of "Loudness" (increased bass & treble)
+	// TODO: couldn't get this to work without a new function so needs looking at again
 	// This works best if the volume is NOT set to 100%.
-	// Bits 15:12	treble control in 1.5dB steps (-8 to +7, 0 = off)
-	// Bits 11:8	lower limit frequency in 1kHz steps (1kHz to 15kHz)
-	// Bits 7:4		Bass Enhancement in 1dB steps (0 - 15, 0 = off)
-	// Bits 3:0		Lower limit frequency in 10Hz steps (2 - 15)
-	char trebleCutOff = 3; // 3kHz cutoff
-	char trebleBoost = 3 << 4 | trebleCutOff;
+
+	// 	Name 		Bits 	Description
+	// ST_AMPLITUDE 15:12 	Treble Control in 1.5 dB steps (-8..7, 0 = off)
+	// ST_FREQLIMIT 11:8 	Lower limit frequency in 1000 Hz steps (1..15)
+	char trebleCutOff = 2; // kHz cutoff
+	char trebleBoost = 5 << 4 | trebleCutOff;
+	log_d("Treble boost expected to be: %d, is: %d", (5 * 16) + trebleCutOff, trebleBoost);
+
+	// SB_AMPLITUDE 7:4 	Bass Enhancement in 1 dB steps (0..15, 0 = off)
+	// SB_FREQLIMIT 3:0 	Lower limit frequency in 10 Hz steps (2..15)
 	char bassCutOff = 10; // times 10 = 100Hz cutoff
-	char bassBoost = 3 << 4 | bassCutOff;
+	char bassBoost = 8 << 4 | bassCutOff;
+	log_d("Bass boost expected to be: %d, is: %d", (8 * 16) + bassCutOff, bassBoost);
 
 	uint16_t SCI_BASS = trebleBoost << 8 | bassBoost;
-	// equivalent of player.setTone(0b0111001110101111);
-	player.setTone(SCI_BASS);
+	player.setAudio(SCI_BASS);
 
 	// Set the volume here to previous value (or default if none)
 	userVolume = preferences.getUInt("Volume", 95);
@@ -197,6 +208,7 @@ void setup()
 	if (!stationConnect(currStnNo))
 	{
 		connectedToStation = false;
+		displayTrackArtist("Unable to connect to this station.");
 	}
 	else
 	{
@@ -225,6 +237,14 @@ void setup()
 
 	//Now how much SRAM free (heap memory)
 	log_d("Free memory: %d bytes", ESP.getFreeHeap());
+
+	/*
+	getRedirectedStationInfo("http://dsldevice.lan/?org_url=http://stream.antenne1.de%2fa1stg%2flivestream1%2eaac&help_wizard=1",1);
+	getRedirectedStationInfo("http://stream.antenne1.de%2fa1stg%2flivestream1%2eaac&help_wizard=1",2);
+	getRedirectedStationInfo("http://stream.bbc.co.uk/myStream.aac",3);
+	
+	while(1);
+	*/
 }
 
 // ==================================================================================
@@ -249,6 +269,9 @@ void loop()
 		// Screen Brightness activate
 		getBulbButtonPress();
 
+		// Settings Button (bass, treble etc)
+		getSettingsBtn();
+
 		// Screen brightness or volume change
 		if (bulbStatus == BTN_ACTIVE || (spkrStatus == BTN_ACTIVE && !isMutedState))
 		{
@@ -270,6 +293,15 @@ void loop()
 #if CORE_DEBUG_LEVEL >= ARDUHAL_LOG_LEVEL_DEBUG
 		// In debug mode it's useful to have the physic NEXT button working
 		checkForNextButton();
+
+		static unsigned long prevMillisFreeMem = 0;
+
+		//How much SRAM free (heap memory) every few minutes
+		if (millis() - prevMillisFreeMem > 300000)
+		{
+			prevMillisFreeMem = millis();
+			log_d("Free memory: %d bytes", ESP.getFreeHeap());
+		}
 #endif
 	}
 }
@@ -277,8 +309,13 @@ void loop()
 // If there is data ready and we have room in the circular buffer, read the mp3/aac stream
 void readHttpStream()
 {
+	// Low buffer monitoring
+	static unsigned long circBufferLow = millis();
+	static uint8_t lowCircBuffCnt = 0;
+
 	// Data to read from mainBuffer?
-	if (client.available() && connectedToStation)
+	int bytesAvailableFromStream = client.available();
+	if (bytesAvailableFromStream > 0 && connectedToStation)
 	{
 		populateRingBuffer();
 
@@ -291,10 +328,11 @@ void readHttpStream()
 				// Reconnect to the current station but don't clear the circ buffer the data is still good
 				if (!stationConnect(currStnNo, false))
 				{
-					// If we can't connect to
+					// If we can't connect to station check wifi
 					if (!client.connected())
 					{
 						connectToWifi();
+						connectedToStation = false;
 					}
 					else
 					{
@@ -302,6 +340,8 @@ void readHttpStream()
 						// screen will be displayed with an advisory message as to what went wrong.
 						connectedToStation = false;
 					}
+
+					log_d("No longer connected to a radio station.");
 				};
 			}
 
@@ -311,20 +351,86 @@ void readHttpStream()
 	}
 	else
 	{
-		// Sometimes we get randomly disconnected from WiFi BUG Why?
+		// Sometimes we get randomly disconnected from WiFi BUG: Why?
 		if (WiFi.status() != WL_CONNECTED)
 		{
 			// TODO: if client suddenly not connected we will have to reconnect
-			Serial.println("Client not connected.");
+			log_w("WiFi client not connected.");
 			connectToWifi();
+
+			// Attempt reconnection to station
+			connectedToStation = false;
+			stationConnect(currStnNo, false);
+		}
+
+		// Perhaps we are no longer connected to a URL stream
+		static unsigned long prevMillisConnected = 0;
+		if (!connectedToStation)
+		{
+			if (millis() - prevMillisConnected > THIRTYSECONDS)
+			{
+				prevMillisConnected = millis();
+				log_w("Not connected to a radio station, attempting to reconnect.");
+
+				// Clear down other flags/count that are monitoring connection/streaming success
+				lowCircBuffCnt = 0;
+				circBufferLow = millis();
+
+				// Attempt reconnection to station
+				stationConnect(currStnNo, false);
+			}
+		}
+	}
+
+	// Nothing available from the WiFi stream? Not unusual, apparently.
+	// static unsigned long prevMillisClient = 0;
+	// if (millis() - prevMillisClient > FIVESECONDS)
+	// {
+	// 	prevMillisClient = millis();
+	// 	log_v("WiFi Client: %d bytes available.", bytesAvailableFromStream);
+	// }
+
+	// RSB If the circular buffer collapses and doesn't recover, we must retune, might be a redirect
+	if (bufferPerCent < 5)
+	{
+		// If buffer still low after timeout, log this
+		if (millis() - circBufferLow > LOWBUFFER_SECONDS)
+		{
+			// We re-tune here if it goes on too long
+			log_d("Low buffer: %d%%, occurence %d", bufferPerCent, ++lowCircBuffCnt);
+
+			// Reset low buffer start time
+			circBufferLow = millis();
+
+			// Retune if there is no recovery
+			if (lowCircBuffCnt >= LOWBUFFER_RECOVERYCOUNT_MAX)
+			{
+				log_w("Low buffer: atempting to reconnect to current station");
+				lowCircBuffCnt = 0;
+
+				// Whether successful reconnection or not, error flags and counts will be reset when buffer > 5%
+				// We won't get to this point again for at least LOWBUFFER_SECONDS anyway, plenty of time for
+				// the buffer to fill, if it's going to
+				stationConnect(currStnNo, false);
+			}
+		}
+	}
+	else
+	{
+		// Clear previous low buffer count, now recovered
+		if (lowCircBuffCnt > 0)
+		{
+			log_d("Low buffer: recovered to %d%%", bufferPerCent);
+			lowCircBuffCnt = 0;
 		}
 	}
 }
 
-// Populate ring buffer with streaming data
+// Populate ring buffer with streaming data (if we have some - this routine only called if bytes available in stream)
+// Must NOT be called directly, only via readHttpStream
 void populateRingBuffer()
 {
-	// Signed because we might get -1 returned
+	// Signed because we might get -1 returned (which means: couldn't read)
 	signed int bytesReadFromStream = 0;
 
 	// If we can't read bytes from the stream, keep track so we can reconnect
@@ -333,37 +439,139 @@ void populateRingBuffer()
 	// Room in the ring buffer for (up to) X bytes?
 	if (circBuffer.room() >= streamingCharsMax)
 	{
-		// Read either the maximum available (max 100) or the number of bytes to the next meta data interval
-		bytesReadFromStream = client.read(
-			(uint8_t *)readBuffer,
-			min(streamingCharsMax, METADATA ? (int)bytesUntilmetaData : streamingCharsMax));
+		// Read either the maximum available (max 32) or the number of bytes to the next meta data interval
+		int expectedBytesFromStream = min(streamingCharsMax, METADATA ? (int)bytesUntilmetaData : streamingCharsMax);
 
-		// If we get -1 here it means nothing could be read from the stream
+		// If this is chunked data (transfer-coding = "chunked" appears as a header) then ensure we skip the
+		// metadata around the chunk. First N bytes (up to CR/LF gives chunk size, all in ASCII hex format)
+		if (isChunked)
+		{
+			// Remove terminating CRLF after the real chunk data
+			if (bytesUntilNextChunk == 2)
+			{
+				//log_v("Discarding final CRLF pair from chunk.");
+				while (client.readBytes(chunkSizeByte, 1) == 0)
+				{
+					log_v("Couldn't read final chunk byte #1 - retrying");
+				};
+
+				while (client.readBytes(chunkSizeByte, 1) == 0)
+				{
+					log_v("Couldn't read final chunk byte #2 - retrying");
+				};
+
+				// Reset the bytes remaining in the chunk
+				bytesUntilNextChunk = 0;
+			}
+
+			// If this is the very first chunk or there are no bytes left in the chunk, prepare to read another chunk
+			if (bytesUntilNextChunk == 0)
+			{
+				// Extract chunk size
+				//log_v("Extracting chunk size from stream");
+
+				// Initialise buffer that holds the chunk size
+				memset(chunkSizeBuffer, 0, 20);
+
+				// Read first N bytes until CR/LF pair to get chunk size
+				uint8_t chunkSizeCount = 0;
+
+				while (1)
+				{
+					// Read one byte at a time from the stream until CRLF pair
+					while (client.readBytes(chunkSizeByte, 1) == 0)
+					{
+						// This is the same "error" as not being able to read client stream - not unusual
+						// log_v("Couldn't read a chunk byte - retrying");
+					};
+
+					// If we have a CRLF pair then we have extract the ASCII size of the chunk
+					if (chunkSizeByte[0] == 13 && client.peek() == 10)
+					{
+						// We have completed reading the chunk size into the buffer
+						// log_v("Chunk size buffer (excl CRLF) %s", chunkSizeBuffer);
+
+						// Read (and discard) the next LF char
+						while (client.readBytes(chunkSizeByte, 1) == 0)
+						{
+							log_v("Couldn't read final LF chunk byte - retrying");
+						};
+
+						// Convert the ASCII hex to an integer (eg "1" "0" "0" "0" is not 1000 it's 4096)
+						char *pEnd;
+						long realChunkSize = strtol(chunkSizeBuffer, &pEnd, 16);
+						//log_v("Chunk size buffer (excl CRLF) %d", realChunkSize);
+
+						// Add two to the count for the terminating CRLF pair. This makes it
+						// easier (for me) to detect the end of a chunk except for the first chunk
+						bytesUntilNextChunk = realChunkSize + 2;
+
+						// Exit this loop
+						break;
+					}
+					else
+					{
+						// Put the character into the chunk size buffer
+						//log_v("Chunk size buffer (so far): %s", chunkSizeBuffer);
+						chunkSizeBuffer[chunkSizeCount++] = chunkSizeByte[0];
+					}
+				}
+			}
+		}
+		if (isChunked)
+		{
+			expectedBytesFromStream = min(expectedBytesFromStream, (int)bytesUntilNextChunk - 2);
+		}
+
+		bytesReadFromStream = client.read((uint8_t *)readBuffer, expectedBytesFromStream);
+
+		// If we get -1 here it means that nothing could be read from the stream
 		// TODO: find out why this might be. Remote server not streaming?
 		if (bytesReadFromStream > 0)
 		{
+			// Subtract the number of bytes read from the chunk
+			if (isChunked)
+			{
+				bytesUntilNextChunk -= bytesReadFromStream;
+
+				//if (bytesUntilNextChunk < 20)
+				//	log_v("Bytes until next chunk: %d", bytesUntilNextChunk);
+			}
+
 			// Add them to the circular buffer
 			circBuffer.write(readBuffer, bytesReadFromStream);
 
 			// If we didn't read the amount we "expected" debug that here
-			// if (bytesReadFromStream < streamingCharsMax && bytesReadFromStream != bytesUntilmetaData)
-			// {
-			// 	log_w("%db to circ", bytesReadFromStream);
-			// }
+			if (bytesReadFromStream < expectedBytesFromStream && expectedBytesFromStream != streamingCharsMax)
+			{
+				log_v("Only %d bytes (wanted %d) read from stream.", bytesReadFromStream, expectedBytesFromStream);
+			}
 
 			// Subtract bytes actually read from incoming http data stream from the bytesUntilmetaData
 			bytesUntilmetaData -= bytesReadFromStream;
+
+			// Reset read error flag
+			if (noBytesReadCount > 0)
+			{
+				if (noBytesReadCount > 10)
+					log_v("Resetting stream zero-bytes read count of %d to zero", noBytesReadCount);
+				noBytesReadCount = 0;
+			}
 		}
 		else
 		{
-			// Increment the problem counter
-			noBytesReadCount++;
-			log_w("Unable to read data from the stream, attempt:%d", noBytesReadCount);
+			// Only inform infrequently as this is very common and is mostly reset on the next read attempt
+			if (++noBytesReadCount % 10 == 0)
+			{
+				// Report error reading from HTTP stream. This can happen often and does
+				// not necessarily indicate a problem. However, if it continues it becomes one.
+				log_d("Unable to read stream, occurrence: %d", noBytesReadCount);
+			}
 
 			// If the threshold is exceeded (when no bytes were read) reconnect to the current station
-			if (noBytesReadCount > 10)
+			if (noBytesReadCount > 10 && bufferPerCent < 5)
 			{
-				log_d("Reconnecting to current station as unable to read bytes from stream");
+				log_d("Unable to read stream and buffer at %d bytes - reconnect to current station");
 
 				// FIXME: Not the place to do this but for quick fix might be OK
 				// Do not clear the buffer - if there is data there it is still good
@@ -398,8 +606,16 @@ bool stationConnect(int stationNo, bool clearBuffer)
 		log_i("-This station has been redirected to a new URL-");
 	}
 
+	// FIXME: should this flag go in the clearBuffer test below?
 	// Flag to indicate we need to buffer data before allowing player to stream audio
 	canPlayMusicFromBuffer = false;
+
+	// Clear down any previous metadata info
+	currstreamArtistTitle = "";
+
+	// Clear any chunked transfer-enocding. Will be specified in a header
+	isChunked = false;
+	bytesUntilNextChunk = 0;
 
 	// If we are here because of corrupt metaData, don't do anything to existing data
 	if (clearBuffer)
@@ -429,7 +645,10 @@ bool stationConnect(int stationNo, bool clearBuffer)
 	// Set the metadataInterval value to zero so we can detect that we found a valid one
 	metaDataInterval = 0;
 
-	// Clear down any screen info
+	// Clear down any screen info and display station name (with redirection marker)
+	if (radioStation[stationNo].friendlyName.find(" [R]", 0) != std::string::npos)
+		radioStation[stationNo].friendlyName += redirected ? " [R]" : "";
+
 	displayStationName(radioStation[stationNo].friendlyName);
 	displayTrackArtist((char *)"Connecting...");
 	drawBufferLevel(0, true);
@@ -467,6 +686,7 @@ bool stationConnect(int stationNo, bool clearBuffer)
 		"Connected to %s (%s%s)",
 		radioStation[stationNo].host.c_str(), radioStation[stationNo].friendlyName.c_str(),
 		redirected ? " - redirected" : "");
+
 	displayTrackArtist("Connected. Reading stream...");
 
 	// Get the data stream plus any metadata (eg station name, track info between songs / ads)
@@ -509,10 +729,23 @@ bool stationConnect(int stationNo, bool clearBuffer)
 		// Delimiter char is not included in data returned
 		String responseLine = client.readStringUntil('\n');
 
-		if (responseLine.indexOf("Status: 200 OK") > 0)
+		// If the header is not empty process it
+		log_d("HEADER: %s", responseLine.c_str());
+
+		if (responseLine.indexOf("200 OK") > 0)
 		{
 			// TODO: we really should check we have a response of 200 before anything else
 			log_d("200 - OK response");
+			redirected = false;
+			continue;
+		}
+
+		// HTTP/1.0 302 Redirect
+		if (responseLine.indexOf("302 Redirect") > 0)
+		{
+			// Redirected to another URL
+			log_d("302 Redirect detected");
+			redirected = true;
 			continue;
 		}
 
@@ -521,9 +754,6 @@ bool stationConnect(int stationNo, bool clearBuffer)
 		{
 			break;
 		}
-
-		// If the header is not empty process it
-		log_v("HEADER: %s", responseLine);
 
 		// Critical value for this whole sketch to work: bytes between "frames"
 		// Sometimes you can't get this first time round so we just reconnect
@@ -535,24 +765,26 @@ bool stationConnect(int stationNo, bool clearBuffer)
 			continue;
 		}
 
+		// Has this stream got 'transfer encoding' = 'chunked' (for http/1.1 only)?
+		if (responseLine.startsWith("Transfer-Encoding: chunked"))
+		{
+			isChunked = true;
+			log_d("Current station uses tranfer-encoding: chunked");
+			continue;
+		}
+
 		// The bit rate of the transmission (FYI) eye candy
 		if (responseLine.startsWith("icy-br:"))
 		{
 			bitRate = responseLine.substring(7).toInt();
-			log_v("Bit rate:%d", bitRate);
+			log_d("Bit rate:%d", bitRate);
 			continue;
 		}
 
-		// TODO: Remove this testing override for station 4 (always redirects!)
-		// The URL we used has been redirected
-		if (!redirected && stationNo == 4)
+		// The URL we used has been redirected?
+		if (responseLine.startsWith("Location: http://"))
 		{
-			responseLine = "location: http://stream.antenne1.de:80/a1stg/livestream1.aac";
-		}
-		// End of test code
-
-		if (responseLine.startsWith("location: http://"))
-		{
+			log_v("Redirection detected: %s", responseLine.c_str());
 			getRedirectedStationInfo(responseLine, stationNo);
 			redirected = true;
 			return false;
@@ -563,7 +795,8 @@ bool stationConnect(int stationNo, bool clearBuffer)
 	if (metaDataInterval == 0 && METADATA)
 	{
 		log_e("NO METADATA INTERVAL DETECTED");
-		displayTrackArtist("No MetaData interval found");
+		if (currDisplayScreen == HOME)
+			displayTrackArtist("No MetaData interval found");
 
 		// TODO: If this happens assume that the stationList.txt is wrong and don't get metadata
 		radioStation[stationNo].useMetaData = 0;
@@ -716,9 +949,12 @@ bool changeStation(int8_t nextStnNo)
 	}
 	else
 	{
+		// Reinstate the HOME screen
 		displayStationName(radioStation[currStnNo].friendlyName);
 		displayTrackArtist(toTitle(currstreamArtistTitle));
+		drawBufferLevel(circBuffer.available(), true);
 		log_i("Same station selected - no further action required");
+		log_i("Room in circular buffer: %d", circBuffer.room());
 	}
 
 	// Ability to change station active again
@@ -760,10 +996,10 @@ inline bool readMetaData()
 
 	// The actual length is 16 times bigger to allow from 16 up to 4080 bytes (255 * 16) of metadata
 	metaDataLength = (metaDataLength * 16);
-	log_d("Metadata block size: %d", metaDataLength);
+	log_v("Metadata block size: %d", metaDataLength);
 
 	// Wait for the entire MetaData to become available in the stream
-	log_d("Waiting for METADATA");
+	log_v("Waiting for METADATA");
 	while (client.available() < metaDataLength)
 	{
 		delayMicroseconds(1);
@@ -777,7 +1013,7 @@ inline bool readMetaData()
 
 	// Populate it from the internet stream
 	client.readBytes((char *)metaDataBuffer, metaDataLength);
-	log_d("MetaData: %s", metaDataBuffer);
+	log_v("MetaData: %s", metaDataBuffer);
 
 	for (auto cnt = 0; cnt < metaDataLength; cnt++)
 	{
@@ -830,16 +1066,29 @@ inline bool readMetaData()
 		// Debug only if there is something to see
 		if (streamArtistTitle != "")
 		{
-			log_i("%s", streamArtistTitle.c_str());
+			log_v("%s", streamArtistTitle.c_str());
 		}
 
-		// Always output the Artist/Track information even if just to clear it from screen
-		// but not if we're not on the HOME screen (eg changing channels)
-		currstreamArtistTitle = streamArtistTitle;
-		if (currDisplayScreen == HOME)
+		// Always output the Artist/Track information even if just to clear it from screen,
+		// but not if we're not on the HOME screen (eg changing channels) or it hasn't changed
+		// as some broadcasters (eg Classic FM) send this down every 500mS!
+		if (currstreamArtistTitle == streamArtistTitle && streamArtistTitle != "")
 		{
-			displayTrackArtist(toTitle(currstreamArtistTitle));
+			log_v("New and old metadata info IDENTICAL");
 		}
+		else
+		{
+			log_v("Previous: '%s'", currstreamArtistTitle.c_str());
+			log_v("New info: '%s'", streamArtistTitle.c_str());
+
+			if (currDisplayScreen == HOME)
+			{
+				displayTrackArtist(toTitle(streamArtistTitle));
+			}
+		}
+
+		// Update the new Artist/Title string from metadata
+		currstreamArtistTitle = streamArtistTitle;
 	}
 
 	// All done
@@ -848,6 +1097,7 @@ inline bool readMetaData()
 
 // Our streaming station has been 'redirected' to another URL
 // The header will look like: Location: http://<new host / path>[:<port>]
+// Location: http://dsldevice.lan/?org_url=http://stream.antenne1.de%2fa1stg%2flivestream1%2eaac&help_wizard=1
 void getRedirectedStationInfo(String header, int currStationNo)
 {
 	log_i("--------------------------------------");
@@ -861,9 +1111,27 @@ void getRedirectedStationInfo(String header, int currStationNo)
 	// We'll assume the port is 80 unless we find one in the host name
 	int redirectedPort = 80;
 
-	// Skip the "redirected http://" bit at the front
-	header = header.substring(17);
-	log_w("Redirecting to: %s", header.c_str());
+	// Find the LAST occurrence of the http:// header so we extract the correct URL
+	size_t last_http = header.lastIndexOf("http://");
+
+	// Skip the http:// bit
+	header = header.substring(last_http + 7);
+	log_d("Redirected encoded URL: '%s'", header.c_str());
+
+	// Unencode the URL into standard ASCII characters
+	std::string oldHeader = header.c_str();
+	std::string decodedURL = urlDecode(oldHeader);
+	header = decodedURL.c_str();
+	log_d("Redirected decoded URL: '%s'", header.c_str());
+
+	// Remove any parameters (start with &)
+	int8_t ampersand = header.indexOf('&');
+	if (ampersand > 0)
+	{
+		log_d("Addition parms from char %d and discarded: %s", ampersand, header.substring(ampersand).c_str());
+		header = header.substring(0, ampersand);
+		log_v("Redirected Final URL: %s", header.c_str());
+	}
 
 	// Split the header into host and path constituents
 	int pathDelimiter = header.indexOf("/");
@@ -872,6 +1140,7 @@ void getRedirectedStationInfo(String header, int currStationNo)
 		redirectedPath = header.substring(pathDelimiter).c_str();
 		redirectedHost = header.substring(0, pathDelimiter).c_str();
 	}
+
 	// Look to split host into host and port number
 	// Example: stream/myradio.de:8080
 	int portDelimter = header.indexOf(":");
@@ -889,6 +1158,8 @@ void getRedirectedStationInfo(String header, int currStationNo)
 	radioStation[currStationNo].path = redirectedPath.c_str();
 	radioStation[currStationNo].port = redirectedPort;
 
+	// Set previous station number to artificial number to force reconnect
+	prevStnNo = 999;
 	return;
 }
 
@@ -936,6 +1207,7 @@ void checkForStationChange()
 						buttonPressPending = true;
 
 						// Redraw the home screen (banner, station name etc)
+						currDisplayScreen = HOME;
 						setupDisplayModule(false);
 
 						// Change station (or keep current one)
@@ -956,7 +1228,6 @@ void checkForStationChange()
 						};
 
 						// We're done here, connected or fail
-						currDisplayScreen = HOME;
 						break;
 					}
 
@@ -964,7 +1235,7 @@ void checkForStationChange()
 					stationNextPrevButtonPressed();
 
 					// Get more data into circular buffer before we run out
-					readHttpStream();
+					doCriticalTasks();
 				}
 			}
 		}
@@ -1054,3 +1325,10 @@ void checkForNextButton()
 	}
 }
 #endif
+
+// Things to do when in a loop, for example
+void doCriticalTasks()
+{
+	// Get more data into circular buffer before we run out
+	readHttpStream();
+}

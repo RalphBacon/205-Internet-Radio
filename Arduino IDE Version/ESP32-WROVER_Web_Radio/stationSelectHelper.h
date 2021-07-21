@@ -23,7 +23,7 @@ TFT_eSPI_Button prevBtn;
 TFT_eSPI_Button nextBtn;
 
 // Cancel button (return to HOME screen w/o changing anything)
-TFT_eSPI_Button cancelBtn;
+TFT_eSPI_Button stationCancelBtn;
 
 // Which page (of stations) are we displaying?
 int currPage = 0;
@@ -210,9 +210,9 @@ void drawPrevStationBtn(bool disable)
 void drawStationCancelButton()
 {
 	tft.setFreeFont(&FreeSansBold9pt7b);
-	cancelBtn.setLabelDatum(-5, 10, L_BASELINE);
-	cancelBtn.initButtonUL(&tft, 45, 203, 25, 25, TFT_YELLOW, TFT_BLUE, TFT_YELLOW, (char *)"X", 1);
-	cancelBtn.drawButton(false);
+	stationCancelBtn.setLabelDatum(-5, 10, L_BASELINE);
+	stationCancelBtn.initButtonUL(&tft, 45, 203, 25, 25, TFT_YELLOW, TFT_BLUE, TFT_YELLOW, (char *)"X", 1);
+	stationCancelBtn.drawButton(false);
 }
 
 void stationNextPrevButtonPressed()
@@ -358,7 +358,7 @@ int getStationListPress()
 					int stnNameOnScreen = currPage * MAX_STATIONS_PER_SCREEN + cnt;
 					if (stnNameOnScreen < radioStation.size())
 					{
-						log_d("Checking button %d of %d for release", stnNameOnScreen, radioStation.size());
+						log_v("Checking button %d of %d for release", stnNameOnScreen, radioStation.size());
 
 						row[cnt].press(false);
 						if (row[cnt].justReleased())
@@ -374,7 +374,7 @@ int getStationListPress()
 		}
 
 		// Cancel button pressed? Same as pressing current station entry
-		if (cancelBtn.contains(x, y)){
+		if (stationCancelBtn.contains(x, y)){
 			pressedBtn = currStnNo;	
 		}
 	}

@@ -38,7 +38,7 @@ void playMusicTask(void *parameter)
 			};
 
 			// We've queued up more music, no more to do this time slice
-			// taskYIELD();
+			taskYIELD();
 		}
 		else
 		{
@@ -49,13 +49,13 @@ void playMusicTask(void *parameter)
 		// We should check that the stack size allocated was correct. This shows the FREE
 		// stack space every X minutes. Assuming we have run all paths it should remain constant.
 		// Comment out this code once satisfied that we have allocated the correct stack space.
-		if (millis() - prevMillis > (60000 * 5)) 
+		if (millis() - prevMillis > (60000 * 5))
 		{
-			// Compiler warning about unused variable if we are not logging this value
-			#if CORE_DEBUG_LEVEL > 3
+// Compiler warning about unused variable if we are not logging this value
+#if CORE_DEBUG_LEVEL > ARDUHAL_LOG_LEVEL_DEBUG
 			unsigned long remainingStack = uxTaskGetStackHighWaterMark(NULL);
-			log_d("Free stack:%lu", remainingStack);
-			#endif
+			log_v("Free stack:%lu", remainingStack);
+#endif
 			prevMillis = millis();
 		}
 	}
@@ -98,7 +98,7 @@ bool playMusicFromRingBuffer()
 void checkBufferForPlaying()
 {
 	// If we have now got enough in the ring buffer to allow playing to start without stuttering?
-	if (circBuffer.available() > CIRCULARBUFFERSIZE / 3)
+	if (circBuffer.available() > CIRCULARBUFFERSIZE / 4)
 	{
 		// Reset the flag, allowing data to be played, won't get reset again until station change
 		canPlayMusicFromBuffer = true;

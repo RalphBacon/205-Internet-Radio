@@ -43,6 +43,12 @@
 // Buffer label
 #define BUFFER_X 250
 #define BUFFER_Y 190
+#define BUFFER_W 60
+#define BUFFER_H 30
+
+// Settings button (switches to settings screen)
+#define SET_X 10
+#define SET_Y 190
 
 // There are 10 bytes (5 integers @ 2 bytes each) for TFT calibration
 #define totCalibrationBytes 10
@@ -56,7 +62,7 @@ enum percentageLineType
 };
 
 //TFT_eSPI_Button muteBtn, brightBtn, dimBtn;
-TFT_eSPI_Button spkrBtn, plusBtn, minusBtn, stnChangeBtn, bulbBtn, dummyPlusBtn, dummyMinusBtn;
+TFT_eSPI_Button spkrBtn, plusBtn, minusBtn, stnChangeBtn, bulbBtn, dummyPlusBtn, dummyMinusBtn, settingsBtn;
 
 // Display routines (hardware/protocol dependent)
 void initDisplay()
@@ -72,15 +78,16 @@ void initDisplay()
 			// Buffer (integer 2 bytes * 5) to hold calibration data
 			uint16_t calData[5];
 
-			// On calibration, 14 bytes were written. TODO: why?
-			//if (f.readBytes((char *)calData, 14) == 14)
+			// Refer to the example file Touch_calibrate.ino (in Generic) for the format
 			if (f.readBytes((char *)calData, totCalibrationBytes) == totCalibrationBytes)
+			{
 				tft.setTouch(calData);
+			}
 
 			log_v("TFT Calibration data:");
-			for (auto cnt = 0; cnt < totCalibrationBytes / sizeof(int); cnt++)
+			for (auto cnt = 0; cnt < totCalibrationBytes / sizeof(uint16_t); cnt++)
 			{
-				log_v("%04X, ", calData[cnt]);
+				log_d("%04X, ", calData[cnt]);
 			}
 
 			f.close();
@@ -123,6 +130,9 @@ void initDisplay()
 	dummyMinusBtn.initButtonUL(
 		&tft, MINUS_BUTTON_X, MINUS_BUTTON_Y, BUTTON_W, BUTTON_H, TFT_ORANGE, TFT_DARKGREY, TFT_LIGHTGREY, (char *)"-", 1);
 
+	settingsBtn.initButtonUL(
+		&tft, SET_X, SET_Y, BUTTON_W * 1.5, BUTTON_H, TFT_YELLOW, TFT_BLACK, TFT_RED, (char *)"SET", 1);
+
 	// Run once
 	setupDisplayModule(true);
 }
@@ -150,11 +160,11 @@ void setupDisplayModule(bool initialiseHardWare)
 	// Application Title
 	tft.setFreeFont(&FreeSansBold12pt7b);
 	tft.setTextSize(1);
-	tft.setCursor(26, 30);
+	tft.setCursor(41, 30);
 
 	// Set text colour and background
 	tft.setTextColor(TFT_YELLOW, TFT_RED);
-	tft.println("- ESP32 WEB RADIO -");
+	tft.println("ESP32 WEB RADIO");
 
 	// Version number (set in platformio.ini)
 	tft.setTextFont(2);
@@ -191,6 +201,9 @@ void setupDisplayModule(bool initialiseHardWare)
 	spkrStatus = BTN_ACTIVE;
 	drawSpkrButton(false);
 	drawSpkrBitmap();
+
+	// Settings
+	drawSettingsBtn();
 
 	// Simple percentage indication of active button (volume or brightness)
 	// Don't draw this during initial setp
@@ -229,7 +242,7 @@ void drawPercentageLine(int lineType)
 
 		// value, in_min, in_max, out_min, out_max
 		uint8_t volWidth = map(currVol, 50, 100, 5, volWidthMax);
-		log_v("Volume %d, volume line length %d", currVol, volWidth);
+		//log_v("Volume %d, volume line length %d", currVol, volWidth);
 
 		// Top line + clearing remainder
 		tft.drawFastHLine(volLineX, volLineY, volWidth, TFT_RED);
@@ -288,12 +301,16 @@ std::string toTitle(std::string s, const std::locale &loc)
 	// Process each character in the supplied string
 	for (char &c : s)
 	{
-		// If the previous character was a word delimiter (space)
+		// If the previous character was a word delimiter?
 		// then upper case current word start, else make lower case
 		c = last ? std::toupper(c, loc) : std::tolower(c, loc);
 
-		// Is this character a space?
-		last = std::isspace(c, loc);
+		// Is this character a space? Or brackets? Note that "ispunct" won't work here!
+		// We have to cater for things like Forever(And ever) and A7S and R.E.M. just to name a few
+		// TODO: Also, we have to deal with names like O'Connor.
+		// TODO: Also, we must not lower case words like BBC
+		std::string validPunctuation = "().-,`";
+		last = std::isspace(c, loc) || std::isdigit(c, loc) || validPunctuation.find(c) != std::string::npos;
 	}
 	return s;
 }
@@ -358,6 +375,13 @@ void drawMinusButton(bool invert)
 	minusBtn.drawButton(invert);
 }
 
+void drawSettingsBtn()
+{
+	tft.setFreeFont(&FreeSans9pt7b);
+	settingsBtn.setLabelDatum(0, +2);
+	settingsBtn.drawButton(false);
+}
+
 // Screen brightness control
 void drawBulbButton()
 {
@@ -372,6 +396,9 @@ void drawBulbBitmap(bool active)
 // Draw percentage of buffering (eg 10000 buffer that uses 8000 bytes = 80%)
 void drawBufferLevel(size_t bufferLevel, bool override)
 {
+	if (currDisplayScreen != HOME)
+		return;
+
 	static unsigned long prevMillis = millis();
 	static int prevBufferPerCent = 0;
 
@@ -384,10 +411,13 @@ void drawBufferLevel(size_t bufferLevel, bool override)
 		// Calculate the percentage (ESP32 has FP processor so shoud be efficient)
 		float bufLevel = (float)bufferLevel;
 		float arraySize = (float)(CIRCULARBUFFERSIZE);
-		int bufferPerCent = (bufLevel / arraySize) * 100.0;
+		bufferPerCent = (bufLevel / arraySize) * 100.0;
+
+		// Stop the annoying flicker from 99% to 100%, just assume over 95% is 100%
+		bufferPerCent = bufferPerCent > 95 ? 100 : bufferPerCent;
 
 		// Only update the screen on real change (avoids flicker & saves time)
-		if (bufferPerCent != prevBufferPerCent || override)
+		if (bufferPerCent > prevBufferPerCent + 1 || bufferPerCent < prevBufferPerCent - 1 || override)
 		{
 			// Track the buffer percentage
 			prevBufferPerCent = bufferPerCent;
@@ -417,12 +447,13 @@ void drawBufferLevel(size_t bufferLevel, bool override)
 				fgColour = TFT_BLACK;
 			};
 
-			tft.fillRoundRect(BUFFER_X, BUFFER_Y, 60, 30, 5, bgColour);
-			tft.drawRoundRect(BUFFER_X, BUFFER_Y, 60, 30, 5, TFT_RED);
+			tft.fillRoundRect(BUFFER_X, BUFFER_Y, BUFFER_W, BUFFER_H, 5, bgColour);
+			tft.drawRoundRect(BUFFER_X, BUFFER_Y, BUFFER_W, BUFFER_H, 5, TFT_RED);
 			tft.setTextColor(fgColour, bgColour);
 			tft.setFreeFont(&FreeSans9pt7b);
 			tft.setTextSize(1);
-			tft.setCursor(BUFFER_X + 11, BUFFER_Y + 20);
+
+			tft.setCursor(bufferPerCent == 100 ? BUFFER_X + 6 : BUFFER_X + 11, BUFFER_Y + 20);
 			tft.printf("%d%%\n", bufferPerCent);
 		}
 	}
@@ -442,7 +473,6 @@ bool getStnChangeButtonPress()
 
 		// While the button is pressed (screen is touched) wait
 		while (!digitalRead(tftTouchedPin))
-			;
 		{
 			// give up remainder of this 1mS time slice
 			taskYIELD();
@@ -744,6 +774,12 @@ void getBulbButtonPress()
 
 void displayStationName(std::string stationName)
 {
+	if (currDisplayScreen != HOME)
+	{
+		log_v("Not on HOME screen - no Station Name displayed");
+		return;
+	}
+
 	// Set text colour and background
 	tft.setTextColor(TFT_YELLOW, TFT_BLACK);
 
@@ -760,16 +796,31 @@ void displayStationName(std::string stationName)
 // Incoming string will normally be in the format Artist - Title
 // But some stations do it the other way around. No standards here.
 // Some do this: "Artist - Title - Artist - Title" What is this?
+// But some titles do have another delimiter for the subtitle: Nino Rota - The Godfather - Love Theme'
 void displayTrackArtist(std::string trackArtistIn)
 {
+	if (currDisplayScreen != HOME)
+	{
+		log_v("Not on HOME screen - no Title/Artist displayed");
+		return;
+	}
+
 	// Placeholder strings for final output
-	std::string justArtist;
-	std::string justTitle;
+	std::string justArtist = "";
+	std::string justTitle = "";
+
+	// Remove any strange quotes like this ` from the title. Eg Tchaikovsky - `Nutcracker`
+	std::size_t posOfStrangeQuote = trackArtistIn.find("`");
+	while (posOfStrangeQuote != std::string::npos)
+	{
+		trackArtistIn.erase(posOfStrangeQuote, 1);
+		posOfStrangeQuote = trackArtistIn.find("`");
+	}
 
 	// Convert string to character array (because that's how I originally wrote this)
 	char *trackArtist = (char *)trackArtistIn.c_str();
 
-	// Did we split this string successfully?
+	// Did we split this string into track & artist successfully?
 	bool splitSuccessful = false;
 
 	// Find where the artist & track are split (if they are)
@@ -780,7 +831,7 @@ void displayTrackArtist(std::string trackArtistIn)
 	// If a delimiter was found
 	if (pointerToDelimiter != NULL)
 	{
-		log_v("Found delimiter at position %d", startCnt);
+		log_v("Found artist/track delimiter at position %d", startCnt);
 
 		// Make a new (sub) string of the first part (not including the delimiter)
 		std::string justArtistTemp(&trackArtist[0], &trackArtist[startCnt]);
@@ -790,14 +841,33 @@ void displayTrackArtist(std::string trackArtistIn)
 		// Make a new (sub) string of the last part (skipping over the delimiter)
 		std::string justTitleTemp(&trackArtist[startCnt + 3], trackArtistIn.size());
 		justTitle = justTitleTemp;
+
 		log_d("Title: '%s'", justTitle.c_str());
 
-		// If the information is repeated just truncate that
-		pointerToDelimiter = strstr(justTitle.c_str(), " - ");
-		if (pointerToDelimiter != NULL) {
-			std::string justTitleTemp(&justTitle[0], pointerToDelimiter);
-			justTitle = justTitleTemp;
-			log_d("Truncated Title: '%s'", justTitle.c_str());
+		// If the information is repeated again just truncate that, otherwise keep it.
+		// First find the delimiter between artist & track
+		std::size_t posOfExtraInfo = justTitle.find(" - ");
+		if (posOfExtraInfo != std::string::npos)
+		{
+			// Extract the extra information after the delimiter
+			std::string extraInfo = justTitle.substr(posOfExtraInfo + 3, justTitle.length());
+			log_v("Extra track info: '%s'", extraInfo.c_str());
+
+			// Is the Artist repeated in this extra info?
+			std::size_t posOfRepeatedArtist = extraInfo.find(justArtist);
+			if (posOfRepeatedArtist != std::string::npos)
+			{
+				log_v("Extra metadata info contains artist name (again)");
+
+				// Remove ALL the repeating information
+				pointerToDelimiter = strstr(justTitle.c_str(), " - ");
+				if (pointerToDelimiter != NULL)
+				{
+					std::string justTitleTemp(&justTitle[0], pointerToDelimiter);
+					justTitle = justTitleTemp;
+					log_d("Truncated Title: '%s'", justTitle.c_str());
+				}
+			}
 		}
 
 		// Success
@@ -812,29 +882,61 @@ void displayTrackArtist(std::string trackArtistIn)
 	// Set default text colour and background
 	tft.setTextColor(TFT_GREEN, TFT_BLACK);
 
-	// Clear the remainder of the line from before (eg long title)
-	tft.fillRect(0, 100, 320, 80, TFT_BLACK);
-
-	// Write artist / track info
+	// Set artist / track info font size
 	tft.setFreeFont(&FreeSans9pt7b);
 	tft.setTextSize(1);
 	tft.setCursor(0, 120);
 
+	// Clear the remainder of the line from before (eg long title)
+	tft.fillRect(0, 100, 320, 80, TFT_BLACK);
+
 	// Change colours if we split the string successfully
 	if (splitSuccessful)
 	{
+		// Will Artist fit onto one line? If not, reduce the font size
+		int titleWidth = tft.textWidth(justArtist.c_str());
+		log_v("Artist text width is %d pixels", titleWidth);
+		if (titleWidth > 320)
+		{
+			tft.setTextFont(2);
+			tft.setCursor(0, 110);
+		}
+
 		// Default colour
 		tft.println(justArtist.c_str());
 
+		// Manually position the text as we may have upset the postioning due to long titles
+		tft.setCursor(0, 145);
+
 		// Larger font, differentiating colour
 		tft.setFreeFont(&FreeSans12pt7b);
+
+		// If the larger font won't fit onto one line, try a smaller font
+		// TODO: Ensure no more than two lines are used in total for title
+		titleWidth = tft.textWidth(justTitle.c_str());
+		log_v("Title text width is %d pixels", titleWidth);
+		if (titleWidth > 320)
+		{
+			tft.setFreeFont(&FreeSans9pt7b);
+
+			// If title still exceeds TWO lines (and would impact buttons) reduce to tiny font
+			titleWidth = tft.textWidth(justTitle.c_str());
+			if (titleWidth > 640)
+			{
+				log_d("Title text width is now %d pixels", titleWidth);
+				tft.setTextFont(2);
+				tft.setCursor(0, 130);
+			}
+		}
+
 		tft.setTextColor(TFT_ORANGE, TFT_BLACK);
-		tft.print(justTitle.c_str());
+		tft.println(justTitle.c_str());
 	}
 	else
 	{
 		// Default colour
 		tft.print(trackArtistIn.c_str());
+		log_v("Track/Artist (combined) displayed on screen");
 	}
 }
 
@@ -844,4 +946,74 @@ void drawDummyPlusMinusButtons()
 	tft.setFreeFont(&FreeSansBold12pt7b);
 	dummyPlusBtn.drawButton();
 	dummyMinusBtn.drawButton();
+}
+
+// Just for debugging, how many times do we fail to get data from the stream?
+void drawFailureStreamingCount(int failCount)
+{
+	static int prevFailCount = 99;
+
+	if (failCount != prevFailCount)
+	{
+		// Remove previous value
+		prevFailCount = failCount;
+		tft.fillRect(5, 190, 50, 30, TFT_BLACK);
+
+		if (failCount > 1)
+		{
+			tft.setTextFont(2);
+			tft.setTextColor(TFT_YELLOW, TFT_BLACK);
+			tft.setCursor(5, 190);
+			tft.print("Read fail: ");
+			tft.print(failCount);
+		}
+	}
+}
+
+// Generic wait for button press then release
+bool getBtnPressAndRelease(TFT_eSPI_Button btn)
+{
+
+	// Only allow this to run infrequently to prevent stalls
+	static unsigned long prevMillis = 0;
+
+	// Arbitrary delay between checks (in mS)
+	if (millis() - prevMillis > 150)
+	{
+		prevMillis = millis();
+		uint16_t t_x = 0, t_y = 0; // To store the touch coordinates
+
+		// Pressed will be set true is there is a valid touch on the screen
+		boolean pressed = tft.getTouch(&t_x, &t_y, 30);
+
+		// Check if any key coordinate boxes contain the touch coordinates
+		if (pressed && settingsBtn.contains(t_x, t_y))
+		{
+			log_d("Button pressed");
+
+			// Redisplay button in inverse (user feedback)
+			tft.setFreeFont(&FreeSans9pt7b);
+			btn.drawButton(true);
+
+			// Wait for release
+			while (!digitalRead(tftTouchedPin))
+			{
+				// give up remainder of this 1mS time slice
+				doCriticalTasks();
+				taskYIELD();
+			}
+
+			log_d("Button released");
+
+			// Display the button non-inverse
+			tft.setFreeFont(&FreeSans9pt7b);
+			btn.drawButton(false);
+
+			// Button was released
+			return true;
+		}
+	}
+
+	// Either screen was not pressed, or press was not for this button
+	return false;
 }

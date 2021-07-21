@@ -17,7 +17,7 @@
 	3 -	Display the stream bits per second (bitrate) on screen just FYI, as it can
 		determine the overall, perceived quality (eg muddy sound vs clear sound),
 		or explain why the stream is stuttering (not receiving data quickly enough)
-		ENHANCEMENT:
+		ENHANCEMENT: WON'T FIX 
 	
 	4 -	Split the Artist & Track string and display on separate lines on screen,
 		to mitigate the chance of the string wrapping onto the next line DONE:
@@ -52,13 +52,13 @@
 		synchronised correctly and reconnect to station BUG DONE:
 
 	15 - Display progress message to screen for wifi connection, radio station connection 
-		etc ENHANCEMENT:
+		etc ENHANCEMENT: IN PROGRESS:
 
 	16 - On/Off/=Stop / Reconnect button (on screen) or MUTE button DONE:
 
 	17 - Implement hardware jumper for MetaData required flag DONE:
 
-	18 - Display SSID & Signal Strength on screen ENHANCEMENT:
+	18 - Display SSID & Signal Strength on screen ENHANCEMENT: WON'T FIX 
 
 	19 - Store current (user changeable) brightness in EEPROM DONE:
 
@@ -70,7 +70,11 @@
 
 	
 
-	
+	A - Rewrite button handler so only actions on release (like a mouse click) with scope for executing background critical operations DONE:
+
+	B - Change all button handling to above - work in progress IN PROGRESS:
+
+	C - Separate "Settings" screen for Bass, Treble, (and centre frequency) plus anything else (eg screen brightness, take off main screen) IN PROGRESS:"
 
 	
 	
