@@ -2,6 +2,9 @@
 
 <img src="images/v1.19_Arduino_IDE_Version.jpg" width="25%">  
 
+**v1.35 HTTPv1.1 and chunking fixed**
+  * Various background fixes
+
 **v1.29 Various changes**
   * Back/Cancel button in station list (simple button for now, bitmap later, maybe)
   * Repeated metadata now trimmed (some stations repeat the Artist/Track twice!!!)
