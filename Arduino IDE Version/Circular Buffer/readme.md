@@ -25,18 +25,18 @@ C:\Users\Ralph\AppData\Local\Arduino15\packages\esp32\hardware\esp32\\**1.0.6**\
     **char \*newbuf = new char[newSize];**  
     **char \*oldbuf = \_buf;**  
   * Replace them with:  
-    **// RSB Use PSRAM here if required  
-	  char \*newbuf;  
-	  if (BOARD_HAS_PSRAM)  
-	  {  
-		  newbuf = (char \*)ps_malloc(newSize);  
-	  }  
-	  else  
-	  {  
-		  newbuf = new char[newSize];  
-	  }  
-	  char \*oldbuf = \_buf;**  
+```
+// RSB Use PSRAM here if required  
+char *newbuf;
+#ifdef BOARD_HAS_PSRAM
+    newbuf = (char *)ps_malloc(newSize);
+#else
+#warning "PSRAM not defined or used"
+    newbuf = new char[newSize];
+#endif
 
+    char *oldbuf = _buf;
+```
 3. If it makes it easier, grab the modified cbuf.cpp file above and replace your copy (best make a backup first, hey?).
 
 4. Now when you compile, it will allocate the circular buffer in PSRAM (shown on startup in the Serial Monitor).
