@@ -48,17 +48,16 @@ size_t cbuf::resize(size_t newSize)
     }
 
     //char *newbuf = new char[newSize];
-    //char *oldbuf = _buf;
+
 	// RSB Use PSRAM here if required
 	char *newbuf;
-	if (BOARD_HAS_PSRAM)
-	{
+#ifdef BOARD_HAS_PSRAM
 	newbuf = (char *)ps_malloc(newSize);
-	}
-	else
-	{
+#else
+#warning "PSRAM not defined or used"
 	newbuf = new char[newSize];
-	}
+#endif
+
 	char *oldbuf = _buf;
 
     if(!newbuf) {
