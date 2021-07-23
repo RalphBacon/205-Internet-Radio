@@ -25,7 +25,7 @@ C:\Users\Ralph\AppData\Local\Arduino15\packages\esp32\hardware\esp32\\**1.0.6**\
     **char \*newbuf = new char[newSize];**  
     **char \*oldbuf = \_buf;**  
   * Replace them with:  
-```
+```cpp
 // RSB Use PSRAM here if required  
 char *newbuf;
 #ifdef BOARD_HAS_PSRAM
