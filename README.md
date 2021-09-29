@@ -27,6 +27,11 @@ Your comments, requests and improvements gratefully received!
 
 #### To support my channel please do click on the affiliate links below before ordering ANYTHING from Banggood, AliExpress or Amazon. It expires 24 hours after clicking it so do come back and re-click!  
 
+
+<img src="https://user-images.githubusercontent.com/20911308/135296246-f216aa5b-0567-4aa8-b1b3-30a3ed92373b.gif" align="left">
+<br />
+<a href="https://buymeacoffee.com/ralphbacon" target="_blank">You can support me by buying me a coffee!</a>  
+
 -----------  
 INFORMATION  
 -----------  
