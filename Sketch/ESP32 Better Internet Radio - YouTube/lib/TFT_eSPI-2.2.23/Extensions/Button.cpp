@@ -2,6 +2,10 @@
 ** Code for the GFX button UI element
 ** Grabbed from Adafruit_GFX library and enhanced to handle any label font
 ***************************************************************************************/
+#include "Arduino.h"
+#include "Button.h"
+#include "TFT_eSPI.h"
+
 TFT_eSPI_Button::TFT_eSPI_Button(void) {
   _gfx       = 0;
   _xd        = 0;
@@ -74,7 +78,9 @@ void TFT_eSPI_Button::drawButton(bool inverted, String long_name) {
   if (long_name == "")
     _gfx->drawString(_label, _x1 + (_w/2) + _xd, _y1 + (_h/2) - 4 + _yd);
   else
-    _gfx->drawString(long_name, _x1 + (_w/2) + _xd, _y1 + (_h/2) - 4 + _yd);
+    //_gfx->drawString(long_name, _x1 + (_w/2) + _xd, _y1 + (_h/2) - 4 + _yd);
+	// RSB to correct centre alignment regardless of DATUM
+	_gfx->drawString(long_name, _x1 + _xd, _y1 + (_h/2) - 4 + _yd);
 
   _gfx->setTextDatum(tempdatum);
   _gfx->setTextPadding(tempPadding);

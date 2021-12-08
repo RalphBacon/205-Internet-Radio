@@ -417,9 +417,10 @@ void TFT_eSPI::init(uint8_t tc)
 
   setRotation(rotation);
 
+// RSB do not use digital output to control the backlight, use PWM in main code
 #if defined (TFT_BL) && defined (TFT_BACKLIGHT_ON)
-  pinMode(TFT_BL, OUTPUT);
-  digitalWrite(TFT_BL, TFT_BACKLIGHT_ON);
+  //pinMode(TFT_BL, OUTPUT);
+  //digitalWrite(TFT_BL, TFT_BACKLIGHT_ON);
 #else
   #if defined (TFT_BL) && defined (M5STACK)
     // Turn on the back-light LED

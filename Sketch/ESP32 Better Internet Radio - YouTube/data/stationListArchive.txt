@@ -1,0 +1,21 @@
+"stream.antenne1.de",80,"/a1stg/livestream1.aac","Antenne1.de","1"
+"stream.antenne1.de",80,"/a1stg/livestream2.mp3","Antenne1 128k",1
+"listen.181fm.com",80,"/181-beatles_128k.mp3","Beatles 128k",1
+"stream-mz.planetradio.co.uk",80,"/magicmellow.mp3","Mellow Magic (Redirected)",1
+"edge-bauermz-03-gos2.sharp-stream.com",80,"/net2national.mp3","Greatest Hits 112k (National)",1
+"airspectrum.cdnstream1.com",8024,"/1302_192","Mowtown Magic Oldies",1
+"live-bauer-mz.sharp-stream.com",80,"/magicmellow.aac","Mellow Magic (48k AAC)",1
+"stream.btsstream.com",8000,"/seaac","South East Radio (AAC 64k)",1
+"uk2.internet-radio.com",8024,"/",UK Dance Radio,1
+"us4.internet-radio.com",8197,"/stream?type=http&nocache=72","EZ Hits South FLA",0
+s1.slotex.pl,7274,"/",Radio Kehlkopf,0
+204.187.100.18,1485,"/",De Natchegaal,1
+"live-bauer-mz.sharp-stream.com",80,"/net2lincoln.aac",Greatest Hits (Lincoln),1
+ais-edge09-live365-dal02.cdnstream.com,80,/a52107?listenerId=esAdblock0650048,Heckington Community Radio,1
+stream-mz.planetradio.co.uk,80,/net1lincoln.aac,Radio Lincs FM,1
+uk3.internet-radio.com,8405,/live,Majestic Jukebox,1
+media-ice.musicradio.com,80,/ClassicFMMP3,Classic FM,1
+ors-sn09.ors-shoutcast.at,80,/ktn-q1a,ORF Radio Kaernten,1
+stream.live.vc.bbcmedia.co.uk,80,/bbc_radio_fourfm,BBC Radio 4 (new),0
+stream.live.vc.bbcmedia.co.uk,80,/bbc_radio_two,BBC Radio 2 (new),0
+stream-mz.planetradio.co.uk,80,/planetrock.aac,Planet Rock,1

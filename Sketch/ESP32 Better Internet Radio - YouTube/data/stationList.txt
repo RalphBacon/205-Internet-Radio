@@ -1,0 +1,19 @@
+"stream.antenne1.de",80,"/a1stg/livestream2.mp3","Antenne1 128k",1
+"live-bauer-mz.sharp-stream.com",80,"/magicmellow.aac","Mellow Magic (48k AAC)",1
+live-bauer-mz.sharp-stream.com,80,/net2lincoln.aac,Greatest Hits (Lincoln),1
+stream-mz.planetradio.co.uk,80,/net1lincoln.aac,Radio Lincs FM,1
+stream.live.vc.bbcmedia.co.uk,80,/bbc_radio_two,BBC Radio 2 (new),0
+stream.live.vc.bbcmedia.co.uk,80,/bbc_radio_fourfm,BBC Radio 4 (new),0
+"edge-bauermz-03-gos2.sharp-stream.com",80,"/net2national.mp3","Greatest Hits 112k (National)",1
+stream-mz.planetradio.co.uk,80,/planetrock.aac,Planet Rock,1
+"airspectrum.cdnstream1.com",8024,"/1302_192","Mowtown Magic Oldies",1
+uk3.internet-radio.com,8405,/live,Majestic Jukebox,1
+media-ice.musicradio.com,80,/ClassicFMMP3,Classic FM,1
+ors-sn09.ors-shoutcast.at,80,/ktn-q1a,ORF Radio Kaernten,1
+"stream.antenne1.de",80,"/a1stg/livestream1.aac","Antenne1.de","1"
+stream.antenne1.de,80,/a1stg/livestream2.aac, Antenne1 Live Stream 2,1
+ais-edge09-live365-dal02.cdnstream.com,80,/a52107?listenerId=esAdblock0650048,Heckington Community Radio,1
+stream.live.vc.bbcmedia.co.uk,80,/bbc_radio_lincolnshire,"BBC Radio Lincolnshire",0
+stream.live.vc.bbcmedia.co.uk,80,/bbc_three_counties_radio,"Three Counties Radio",0
+208.92.53.98,3690,"/SRGSTR25AAC_SC","Classic FM Chill Out",1
+21293.live.streamtheworld.com,80,/SRGSTR25.mp3,"Classic FM Chill Out",1

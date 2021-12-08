@@ -1,11 +1,12 @@
-/***************************************************************************************
+#ifndef _TFTBUTTON_ 
+#define _TFTBUTTON_
+/**************************************************************************************
 // The following button class has been ported over from the Adafruit_GFX library so
 // should be compatible.
 // A slightly different implementation in this TFT_eSPI library allows the button
 // legends to be in any font, allow longer labels and to adjust text positioning
 // within button
 ***************************************************************************************/
-
 class TFT_eSPI_Button {
 
  public:
@@ -42,3 +43,4 @@ class TFT_eSPI_Button {
 
   bool  currstate, laststate; // Button states
 };
+#endif

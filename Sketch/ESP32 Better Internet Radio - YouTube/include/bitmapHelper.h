@@ -1,14 +1,21 @@
 // Bodmers BMP image rendering function
+#include "Arduino.h"
+#include "main.h"
+
+// Forward declarations local to this helper
+uint16_t read16(fs::File &f);
+uint32_t read32(fs::File &f);
 
 void drawBmp(const char *filename, int16_t x, int16_t y)
 {
+
 	if ((x >= tft.width()) || (y >= tft.height()))
 		return;
 
 	fs::File bmpFS;
 
 	// Open requested file on SD card
-	bmpFS = SPIFFS.open(filename, "r");
+	bmpFS = LITTLEFS.open(filename, "r");
 
 	if (!bmpFS)
 	{
@@ -17,10 +24,12 @@ void drawBmp(const char *filename, int16_t x, int16_t y)
 	}
 
 	uint32_t seekOffset;
-	uint16_t w, h, row, col;
+	uint16_t w, h, row; //, col;
 	uint8_t r, g, b;
 
+#if CORE_DEBUG_LEVEL > ARDUHAL_LOG_LEVEL_DEBUG
 	uint32_t startTime = millis();
+#endif
 
 	if (read16(bmpFS) == 0x4D42)
 	{
@@ -62,12 +71,10 @@ void drawBmp(const char *filename, int16_t x, int16_t y)
 				tft.pushImage(x, y--, w, 1, (uint16_t *)lineBuffer);
 			}
 			tft.setSwapBytes(oldSwapBytes);
-			Serial.print("Loaded in ");
-			Serial.print(millis() - startTime);
-			Serial.println(" ms");
+			log_v("Loaded in %ul ms", (millis() - startTime));
 		}
 		else
-			Serial.println("BMP format not recognized.");
+			log_e("BMP format not recognized.");
 	}
 	bmpFS.close();
 }

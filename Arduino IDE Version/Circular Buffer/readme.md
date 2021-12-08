@@ -13,10 +13,11 @@ To prevent this, and avoid trying to use the PSRAM, change the **main.h** file i
 **Now you need to modify the Espressif framework to use the PSRAM - it's just three lines of code**
 
 1. Identify the location of your ESP32 Core library. For me it's:
-C:\Users\Ralph\AppData\Local\Arduino15\packages\esp32\hardware\esp32\\**1.0.6**\cores\esp32  
-*Note: the version (in bold) will change over time as Espressif updates the framework.*
+   C:\Users\Ralph\AppData\Local\Arduino15\packages\esp32\hardware\esp32\\**1.0.6**\cores\esp32  
+   *Note: the version (in bold) will change over time as Espressif updates the framework.*
 
 2. Find the **cbuf.cpp** file, open in Notepad or other text editor, and make these amendments:
+<<<<<<< Updated upstream
 
   * At the top of the file, under #include "cbuf.h" add the line:  
     **#include "esp32-hal-psram.h"**  
@@ -37,6 +38,32 @@ char *newbuf;
 
     char *oldbuf = _buf;
 ```
+=======
+   
+   * At the top of the file, under #include "cbuf.h" add the line:  
+     **#include "esp32-hal-psram.h"**  
+   * Find the **cbuf::resize** function
+   * Find the lines:  
+     **char \*newbuf = new char[newSize];**  
+     **char \*oldbuf = \_buf;**  
+   * Replace them with:  
+     **// RSB Use PSRAM here if required  
+      char \*newbuf;  
+      if (BOARD_HAS_PSRAM)  
+      {  
+     
+          newbuf = (char \*)ps_malloc(newSize);  
+     
+      }  
+      else  
+      {  
+     
+          newbuf = new char[newSize];  
+     
+      }  
+      char \*oldbuf = \_buf;**  
+
+>>>>>>> Stashed changes
 3. If it makes it easier, grab the modified cbuf.cpp file above and replace your copy (best make a backup first, hey?).
 
 4. Now when you compile, it will allocate the circular buffer in PSRAM (shown on startup in the Serial Monitor).
@@ -44,5 +71,5 @@ char *newbuf;
 <img src="images/UsingCircBuffer.JPG">
 
 5. Once you are sure it is using the PSRAM (not SRAM) increase the cbuf value in file main.h to 150000 (150K) and you have a buffer that gives about 10 seconds, more than enough.
-  
+
 <img src="images/main.h_edits.JPG">
