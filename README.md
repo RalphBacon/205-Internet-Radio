@@ -12,7 +12,7 @@ An Internet Radio Player for around $20 (without a case) can't be all bad and yo
 <em>Current version (July 2021)</em>
 </p>
 
-**Release V1.38**
+**Release V1.38**  
 Bug fixes associated with Internet or Wi-Fi failure. Radio recovers better now. For most people this will be totally transparent.
 
 **Release V1.35**  
