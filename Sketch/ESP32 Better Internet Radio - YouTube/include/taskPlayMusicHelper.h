@@ -80,11 +80,11 @@ bool playMusicFromRingBuffer()
 				// If we didn't read the full 32 bytes, that's a worry!
 				if (bytesRead != 32)
 				{
-					log_e("Only read %db from ring buff", bytesRead);
+					log_w("Only read %db from ring buff", bytesRead);
 					dataPanic = true;
 				}
 
-				// Actually send the data to the VS1053
+				// Now send the data to the VS1053
 				player.playChunk(mp3buff, bytesRead);
 			}
 		}

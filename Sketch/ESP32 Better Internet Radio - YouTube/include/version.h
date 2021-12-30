@@ -1,10 +1,9 @@
 
-#ifndef BUILD_NUMBER
-  #define BUILD_NUMBER "36"
-#endif
-#ifndef VERSION
-  #define VERSION "v1.210701_36 - 2021-12-08 13:10:12.436186"
-#endif
-#ifndef VERSION_SHORT
-  #define VERSION_SHORT "v1.36"
-#endif
+    // AUTO GENERATED FILE, DO NOT EDIT
+    #ifndef VERSION
+        #define VERSION "v1.38"
+    #endif
+    #ifndef BUILD_TIMESTAMP
+        #define BUILD_TIMESTAMP "2021-12-22 17:31:01.311241"
+    #endif
+    
